@@ -1,0 +1,285 @@
+@media (min-width: 1400px) {
+  .container, .container-lg, .container-md,
+  .container-sm, .container-xl, .container-xxl {
+    max-width: 1440px;
+  }
+}
+
+/* GLOBAL ADVENTURE GOLD ACCENTS */
+.btn10 { 
+  background-color: #ecc258; 
+  opacity: 1; 
+  border-color: #dfb137; 
+  color: #062419 !important;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+.btn10:hover { 
+  background-color: #dfb137; 
+  border-color: #c49a2a;
+  transform: translateY(-1px);
+}
+.days { font-size: 13px !important; }
+
+/* Global app canvas background setup - warm matte sand tone */
+.secondbg { background-color: #f7f5f0 !important; }
+body { background-color: #f7f5f0 !important; color: #1e293b; }
+
+/* ==========================================
+   HERO / LANDING LAYER
+   ========================================== */
+.hero-landing { position: relative; width: 100%; margin-bottom: 0; }
+.hero-carousel, .hero-carousel .carousel-inner, .hero-carousel .carousel-item { height: 100%; }
+.hero-carousel .hero-img { width: 100%; height: 100%; object-fit: cover; }
+
+.hero-overlay-content {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(6, 36, 25, 0.9) 0%, rgba(15, 23, 42, 0.5) 60%, rgba(6, 36, 25, 0.85) 100%);
+  z-index: 10;
+  padding: 0 1.5rem;
+}
+
+.hero-heading { 
+  font-size: clamp(2.6rem, 5vw, 4rem); 
+  font-weight: 900; 
+  color: #ffffff; 
+  letter-spacing: -0.03em; 
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  line-height: 1.1;
+}
+
+.hero-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0.4rem 1.1rem; border-radius: 999px;
+  background: rgba(236, 194, 88, 0.15); 
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(236, 194, 88, 0.4);
+  color: #ecc258; font-weight: 700; font-size: 0.8rem;
+  text-transform: uppercase; letter-spacing: 0.15em;
+}
+
+.hero-subtitle { 
+  max-width: 650px; 
+  margin: 1.2rem auto 2rem auto; 
+  color: #e2e8f0 !important; 
+  font-size: 1.1rem; 
+  font-weight: 400;
+  line-height: 1.6;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.hero-search-form { max-width: 720px; width: 100%; margin-left: auto; margin-right: auto; }
+
+.hero-search-wrapper {
+  position: relative; display: flex; align-items: stretch;
+  background-color: #f7f5f0; border-radius: 16px; padding: 0.35rem;
+  box-shadow: 0 24px 48px rgba(4, 20, 14, 0.4); overflow: visible;
+  border: 2px solid #ecc258;
+}
+
+.hero-search-input {
+  flex: 1; border: none; outline: none;
+  padding: 0.95rem 1.5rem; font-size: 1rem;
+  border-radius: 12px 0 0 12px;
+  font-weight: 500;
+  color: #062419;
+  background-color: transparent;
+}
+.hero-search-input::placeholder { color: #64748b; }
+
+.hero-search-button {
+  border: none; outline: none; border-radius: 12px;
+  padding: 0 2rem; display: flex; align-items: center; justify-content: center;
+  background: #ecc258; cursor: pointer; 
+  transition: all 0.2s cubic-bezier(0.19, 1, 0.22, 1);
+}
+.hero-search-button:hover { 
+  background: #dfb137; 
+  transform: scale(1.02); 
+}
+.hero-search-icon { width: 1.4rem; height: 1.4rem; fill: #062419; }
+
+.search-suggestions {
+  position: absolute; top: 100%; left: 0; right: 0; margin-top: 8px;
+  background: #f7f5f0; border-radius: 14px;
+  box-shadow: 0 20px 40px rgba(6, 36, 25, 0.15);
+  max-height: 280px; overflow-y: auto; z-index: 9999; display: none;
+  border: 1px solid #ecc258;
+}
+
+.search-suggestion-item {
+  padding: 0.75rem 1.25rem; display: flex; flex-direction: column;
+  align-items: flex-start; gap: 2px; cursor: pointer;
+  border-bottom: 1px solid rgba(6, 36, 25, 0.05);
+}
+.search-suggestion-item:last-child { border-bottom: none; }
+.search-suggestion-main { font-size: 0.95rem; font-weight: 700; color: #062419; }
+.search-suggestion-secondary { font-size: 0.8rem; color: #64748b; }
+.search-suggestion-item:hover, .search-suggestion-item.active { background: #fefbeb; }
+
+@media (max-width: 767.98px) {
+  .hero-carousel, .hero-carousel .carousel-inner, .hero-carousel .carousel-item { height: 75vh; }
+  .hero-heading { font-size: 2.2rem; }
+  .hero-search-wrapper { border-radius: 14px; }
+  .hero-search-input { padding: 0.8rem 1rem; }
+  .hero-search-button { padding: 0 1.2rem; border-radius: 10px; }
+}
+
+/* ==========================================
+   PREMIUM ADVENTURE TRIP CARDS
+   ========================================== */
+.premium-card {
+  background: rgba(255, 255, 255, 0.65); /* Elegant semi-translucent layout style over matte canvas */
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  border: 1px solid rgba(6, 36, 25, 0.08); border-radius: 20px;
+  transition: all 0.35s cubic-bezier(0.19, 1, 0.22, 1);
+  display: flex; flex-direction: column; height: 100%;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(6, 36, 25, 0.02);
+}
+.card-content { flex-grow: 1; display: flex; flex-direction: column; padding: 1.5rem; background: transparent; }
+.premium-card:hover { 
+  transform: translateY(-8px); 
+  box-shadow: 0 22px 40px rgba(6, 36, 25, 0.12); 
+  border-color: #ecc258;
+  background: #ffffff; /* Turns clean solid on card hover interaction */
+}
+
+.trek-card-image-wrapper {
+  position: relative; overflow: hidden; height: 240px; flex-shrink: 0;
+}
+.image-inner { position: absolute; inset: 0; }
+.image-inner img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1); }
+.premium-card:hover img { transform: scale(1.06); }
+
+/* Golden Ticket Cost Badge */
+.price-pill {
+  position: absolute; bottom: 16px; right: 16px;
+  background: #062419;
+  border: 1px solid rgba(236, 194, 88, 0.3);
+  color: #fff; padding: 6px 14px; border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.3);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+}
+.price-onwards { font-size: 8px; font-weight: 700; letter-spacing: 0.08em; color: #ecc258; text-transform: uppercase; }
+.price-value { font-size: 16px; font-weight: 800; color: #ffffff; line-height: 1.1; }
+
+.location-text { color: #062419; font-weight: 700; font-size: 1.15rem; letter-spacing: -0.3px; }
+.days { font-size: 13px; color: #475569; font-weight: 500; }
+
+.operator-grid-wrapper .d-flex { flex-wrap: wrap; gap: 6px; margin-top: auto; }
+.operator-badge-premium {
+  background-color: #fefbeb; 
+  color: #854d0e;
+  border: 1px solid #fef08a;
+  font-size: 0.72rem; font-weight: 600;
+  padding: 4px 10px; border-radius: 6px;
+  transition: all 0.2s ease;
+}
+.operator-badge-premium:hover { 
+  background-color: #062419; 
+  color: #ecc258; 
+  border-color: #ecc258;
+}
+
+/* ==========================================
+   TRAVEL YOUR WAY CATEGORIES
+   ========================================== */
+.travel-your-way { background-color: #e2dfd5; padding: 5rem 0; border-top: 1px solid rgba(6, 36, 25, 0.06); border-bottom: 1px solid rgba(6, 36, 25, 0.06); }
+.tyw-title { font-size: clamp(2.2rem, 3.5vw, 2.8rem); font-weight: 800; color: #062419; letter-spacing: -0.5px; }
+.tyw-subtitle { max-width: 640px; margin-left: auto; margin-right: auto; font-size: 1rem; color: #475569; }
+.tyw-card-link { text-decoration: none; color: inherit; display: block; }
+
+.tyw-card {
+  background-color: rgba(255, 255, 255, 0.5); border-radius: 20px; padding: 2rem 1.5rem;
+  box-shadow: 0 10px 30px rgba(6, 36, 25, 0.02);
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem; width: 100%;
+  transition: all 0.25s cubic-bezier(0.19, 1, 0.22, 1);
+  border: 2px solid transparent;
+}
+.tyw-card:hover { 
+  transform: translateY(-4px); 
+  box-shadow: 0 16px 35px rgba(6, 36, 25, 0.08); 
+  border-color: #ecc258;
+  background-color: #ffffff;
+}
+.tyw-card-active { 
+  background-color: #ffffff;
+  border-color: #ecc258; 
+  box-shadow: 0 16px 35px rgba(236, 194, 88, 0.25); 
+}
+.tyw-card-title { font-size: 1.1rem; font-weight: 700; color: #062419; }
+.tyw-card-text { font-size: 0.88rem; margin: 0; color: #475569; text-align: center; line-height: 1.5; }
+
+.tyw-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; margin-bottom: 0.5rem;
+}
+.icon-adventure { background: #fefbeb; color: #ca8a04; }
+.icon-weekend { background: #fef9c3; color: #a16207; }
+.icon-nature { background: #dcfce7; color: #16a34a; }
+.icon-beach { background: #e0f2fe; color: #0284c7; }
+.icon-spiritual { background: #fae8ff; color: #c026d3; }
+.icon-camping { background: #ffedd5; color: #ea580c; }
+
+/* ==========================================
+   WHY CHOOSE US BAR FEATURES
+   ========================================== */
+.why-trek { background-color: #f7f5f0; padding: 5rem 0; }
+.why-title { font-size: clamp(2.2rem, 3.5vw, 2.8rem); font-weight: 800; color: #062419; letter-spacing: -0.5px; }
+.why-subtitle { max-width: 720px; margin-left: auto; margin-right: auto; font-size: 1rem; color: #475569; }
+
+.why-card {
+  background-color: rgba(255, 255, 255, 0.4); border-radius: 20px; padding: 2.2rem 2rem;
+  border: 1px solid rgba(6, 36, 25, 0.08);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.8rem; width: 100%;
+  transition: all 0.2s ease;
+}
+.why-card:hover {
+  background-color: #ffffff;
+  border-color: #ecc258;
+  box-shadow: 0 12px 30px rgba(6, 36, 25, 0.06);
+}
+.why-icon-circle {
+  width: 48px; height: 48px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; margin-bottom: 0.2rem;
+  background: #062419; color: #ecc258;
+}
+.why-card-title { font-size: 1.15rem; font-weight: 700; margin: 0; color: #062419; }
+.why-card-text { font-size: 0.9rem; margin: 0; color: #475569; text-align: left; line-height: 1.6; }
+
+@media (max-width: 767.98px) {
+  .why-card { align-items: center; text-align: center; }
+  .why-card-text { text-align: center; }
+}
+
+/* ==========================================
+   PAGINATION / FOOTER ELEMENTS
+   ========================================== */
+.pagination .page-link { border-radius: 8px; margin: 0 4px; border: 1px solid #e2e8f0; color: #062419; font-weight: 600; padding: 8px 14px; background: rgba(255,255,255,0.6); }
+.pagination .page-item.active .page-link { background: #062419; color: #ecc258; border-color: #062419; }
+.pagination .page-link:hover { background: #fefbeb; color: #ca8a04; border-color: #fef08a; }
+
+.related-trek-badge, .badge.bg-light.text-dark.border { 
+  transition: all 0.2s ease; 
+  cursor: pointer; 
+  border-radius: 6px;
+  padding: 6px 12px;
+  background-color: rgba(255,255,255,0.6) !important;
+  color: #062419 !important;
+  border: 1px solid rgba(6, 36, 25, 0.08) !important;
+}
+.related-trek-badge:hover, .badge.bg-light.text-dark.border:hover { 
+  background: #ecc258 !important; 
+  color: #062419 !important; 
+  border-color: #ecc258 !important; 
+}

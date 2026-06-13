@@ -1,0 +1,827 @@
+
+
+
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ blog.title }} - Aorbo Treks{% endblock %}
+
+{% block extra_css %}
+<!-- SEO Meta Tags -->
+<meta name="description" content="{{ blog.title|truncatewords:20 }}. Read our latest insights about trekking and travel adventures from Aorbo Treks.">
+<meta name="keywords" content="trekking, travel, adventure, blog, hiking">
+<meta name="author" content="{{ blog.author }}">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+
+<!-- Open Graph Tags (Facebook, LinkedIn) -->
+<meta property="og:type" content="article">
+<meta property="og:title" content="{{ blog.title }}">
+<meta property="og:description" content="{{ blog.title|truncatewords:20 }}">
+{% if blog.image_url %}
+<meta property="og:image" content="{{ blog.image_url }}">
+{% endif %}
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+<meta property="og:site_name" content="Aorbo Treks">
+
+<!-- Twitter Card Tags -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ blog.title }}">
+{% if blog.excerpt %}
+<meta name="twitter:description" content="{{ blog.excerpt|truncatewords:30 }}">
+{% else %}
+<meta name="twitter:description" content="{{ blog.title|truncatewords:20 }}">
+{% endif %}
+{% if blog.image_url %}
+<meta name="twitter:image" content="{{ blog.image_url }}">
+{% endif %}
+
+<!-- Canonical URL -->
+<link rel="canonical" href="{{ request.build_absolute_uri }}">
+
+<!-- Additional SEO -->
+<meta property="article:published_time" content="{{ blog.created_at|date:'c' }}">
+<meta property="article:author" content="{{ blog.author }}">
+
+<style>
+    :root {
+        --primary: #FFE100;
+        --accent-blue: #2563eb;
+        --background-light: #ffffff;
+        --background-dark: #0f172a;
+        --surface-light: #f9fafb;
+        --surface-dark: #1e293b;
+        --text-dark: #111827;
+        --text-muted: #4b5563;
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background-color: var(--background-light);
+        color: var(--text-dark);
+        line-height: 1.6;
+    }
+
+    .blog-container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: clamp(1rem, 3vw, 2rem);
+    }
+
+    .blog-main {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: clamp(2rem, 4vw, 4rem);
+        margin-top: clamp(1rem, 1.5vw, 1.5rem);
+        margin-bottom: clamp(3rem, 6vw, 5rem);
+    }
+
+    /* Header Section */
+    .blog-header {
+        max-width: 50rem;
+        margin-bottom: clamp(2rem, 4vw, 3rem);
+          padding-top: 110px;
+    }
+    
+    .blog-title {
+        font-size: clamp(28px, 5vw, 52px);
+        font-weight: 800;
+        line-height: 1.2;
+        margin-bottom: clamp(1.5rem, 2vw, 2rem);
+        color: var(--text-dark);
+    }
+
+    .blog-meta {
+        display: flex;
+        align-items: center;
+        gap: clamp(0.75rem, 1.5vw, 1.5rem);
+        flex-wrap: wrap;
+        font-size: clamp(12px, 1vw, 14px);
+        color: var(--text-muted);
+    }
+
+    .blog-meta-author {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+
+    .blog-meta-separator {
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: #cbd5e1;
+    }
+
+    .blog-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+
+    /* Featured Image */
+    .blog-featured-image-wrapper {
+        width: 100%;
+        max-width: 50rem;
+        border-radius: clamp(1rem, 2vw, 1.5rem);
+        overflow: hidden;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        margin-bottom: clamp(2rem, 4vw, 3rem);
+    }
+
+    .blog-featured-image {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 16 / 9;
+        object-fit: cover;
+        display: block;
+    }
+
+    /* Content Grid Layout */
+    .blog-content-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: clamp(2rem, 4vw, 4rem);
+        align-items: start;
+    }
+
+    /* Article Content */
+    .blog-content {
+        font-size: clamp(14px, 1.1vw, 16px);
+        line-height: 1.8;
+        color: var(--text-muted);
+    }
+
+    .blog-content p {
+        margin-bottom: clamp(1rem, 2vw, 1.5rem);
+        text-align: justify;
+    }
+
+    .blog-content h2 {
+        font-size: clamp(22px, 3.5vw, 40px);
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: clamp(2rem, 3vw, 2.5rem) 0 clamp(1rem, 1.5vw, 1.5rem);
+        scroll-margin-top: 8rem;
+    }
+
+    .blog-content h3 {
+        font-size: clamp(18px, 2.5vw, 32px);
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: clamp(1.5rem, 2vw, 2rem) 0 clamp(0.75rem, 1vw, 1rem);
+    }
+
+    .blog-content ul,
+    .blog-content ol {
+        margin: clamp(1rem, 1.5vw, 1.5rem) 0 clamp(1rem, 1.5vw, 1.5rem) clamp(1.5rem, 2vw, 2rem);
+        padding-left: clamp(1.5rem, 2vw, 2rem);
+    }
+
+    .blog-content li {
+        margin-bottom: clamp(0.5rem, 1vw, 0.75rem);
+        line-height: 1.8;
+    }
+
+    .blog-content img {
+        width: 100%;
+        max-width: 50rem;
+        height: auto;
+        border-radius: clamp(1rem, 1.5vw, 1.25rem);
+        margin: clamp(1.5rem, 2vw, 2rem) 0;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    .blog-content blockquote {
+        border-left: clamp(3px, 0.5vw, 4px) solid var(--primary);
+        padding-left: clamp(1rem, 2vw, 1.5rem);
+        margin: clamp(1.5rem, 2vw, 2rem) 0;
+        font-size: clamp(16px, 1.3vw, 18px);
+        font-style: italic;
+        color: var(--accent-blue);
+        line-height: 1.8;
+    }
+
+    /* Pro Tip Box */
+    .blog-tip-box {
+        display: flex;
+        gap: clamp(1rem, 2vw, 1.5rem);
+        padding: clamp(1.5rem, 2.5vw, 2rem);
+        background: #f0f9ff;
+        border-radius: clamp(1rem, 1.5vw, 1.25rem);
+        margin: clamp(2rem, 3vw, 2.5rem) 0;
+        border-left: 4px solid var(--accent-blue);
+    }
+
+    .blog-tip-icon {
+        font-size: clamp(28px, 3vw, 32px);
+        flex-shrink: 0;
+        color: var(--accent-blue);
+    }
+
+    .blog-tip-content h4 {
+        font-size: clamp(16px, 1.5vw, 18px);
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: var(--text-dark);
+    }
+
+    .blog-tip-content p {
+        font-size: clamp(13px, 1vw, 15px);
+        color: var(--text-muted);
+        margin: 0;
+    }
+
+    /* Sidebar */
+    .blog-sidebar {
+        display: none;
+    }
+
+    .sidebar-sticky {
+        position: sticky;
+        top: clamp(100px, 8vw, 120px);
+        display: flex;
+        flex-direction: column;
+        gap: clamp(1.5rem, 2vw, 2rem);
+    }
+
+    .sidebar-card {
+        background: var(--surface-light);
+        border: 1px solid #e5e7eb;
+        border-radius: clamp(1rem, 1.5vw, 1.25rem);
+        padding: clamp(1.5rem, 2vw, 2rem);
+    }
+
+    .sidebar-title {
+        font-size: clamp(16px, 1.5vw, 18px);
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: clamp(1rem, 1.5vw, 1.25rem);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .sidebar-link {
+        display: block;
+        font-size: clamp(13px, 1vw, 15px);
+        color: var(--text-muted);
+        text-decoration: none;
+        padding: clamp(0.5rem, 1vw, 0.75rem) 0;
+        border-bottom: 1px solid #f0f0f0;
+        transition: color 0.3s ease;
+    }
+
+    .sidebar-link:last-child {
+        border-bottom: none;
+    }
+
+    .sidebar-link:hover {
+        color: var(--accent-blue);
+    }
+
+    .share-buttons {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: clamp(0.5rem, 1vw, 0.75rem);
+    }
+
+    .share-btn {
+        width: 100%;
+        aspect-ratio: 1;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        background: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        font-size: clamp(18px, 2vw, 20px);
+    }
+
+    .share-btn:hover {
+        transform: scale(1.05);
+    }
+
+    /* Newsletter Box */
+    .newsletter-box {
+        background: linear-gradient(135deg, var(--text-dark), #1f2937);
+        color: white;
+        padding: clamp(1.5rem, 2.5vw, 2rem);
+        border-radius: clamp(1rem, 1.5vw, 1.25rem);
+    }
+
+    .newsletter-box h3 {
+        font-size: clamp(16px, 1.5vw, 18px);
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: white;
+    }
+
+    .newsletter-box p {
+        font-size: clamp(12px, 0.9vw, 14px);
+        color: #cbd5e1;
+        margin-bottom: clamp(1rem, 1.5vw, 1.25rem);
+        line-height: 1.6;
+    }
+
+    .newsletter-form {
+        display: flex;
+        flex-direction: column;
+        gap: clamp(0.75rem, 1vw, 1rem);
+    }
+
+    .newsletter-input {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: clamp(0.75rem, 1.2vw, 1rem);
+        border-radius: 0.5rem;
+        color: white;
+        font-size: clamp(13px, 1vw, 15px);
+        font-family: inherit;
+        transition: all 0.3s ease;
+    }
+
+    .newsletter-input::placeholder {
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    .newsletter-input:focus {
+        outline: none;
+        background: rgba(255, 255, 255, 0.15);
+        border-color: var(--primary);
+    }
+
+    .newsletter-btn {
+        background: var(--primary);
+        color: var(--text-dark);
+        border: none;
+        padding: clamp(0.75rem, 1.2vw, 1rem);
+        border-radius: 0.5rem;
+        font-weight: 700;
+        font-size: clamp(13px, 1vw, 15px);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .newsletter-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(255, 225, 0, 0.2);
+    }
+
+    /* Recent Posts */
+    .recent-posts-section {
+        margin-top: clamp(4rem, 8vw, 6rem);
+        padding-top: clamp(2rem, 4vw, 3rem);
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .recent-posts-title {
+        font-size: clamp(22px, 3.5vw, 40px);
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: clamp(2rem, 4vw, 3rem);
+        color: var(--text-dark);
+    }
+
+    .recent-posts-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
+    @media (max-width: 1024px) {
+    .recent-posts-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    }
+    @media (max-width: 768px) {
+        .recent-posts-grid {
+            grid-template-columns: 1fr; /* One below another */
+        }
+    }
+
+
+    .post-card {
+        background: white;
+        border-radius: clamp(1rem, 1.5vw, 1.25rem);
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.3s ease;
+        border: 1px solid #e5e7eb;
+    }
+
+    .post-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .post-image {
+        width: 100%;
+        height: clamp(150px, 20vw, 180px);
+        overflow: hidden;
+    }
+
+    .post-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+
+    .post-card:hover .post-image img {
+        transform: scale(1.05);
+    }
+
+    .post-content {
+        padding: clamp(1rem, 1.5vw, 1.25rem);
+    }
+
+    .post-title {
+        font-size: clamp(14px, 1.2vw, 16px);
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: var(--text-dark);
+        line-height: 1.4;
+    }
+
+    .post-date {
+        font-size: clamp(12px, 0.9vw, 14px);
+        color: var(--text-muted);
+    }
+
+    /* Responsive Tablet and Desktop */
+    @media (min-width: 1024px) {
+        .blog-content-grid {
+            grid-template-columns: 1fr 320px;
+        }
+
+        .blog-sidebar {
+            display: block;
+        }
+    }
+
+    /* Mobile Optimization */
+    @media (max-width: 768px) {
+        .blog-container {
+            padding: clamp(0.75rem, 2vw, 1.5rem);
+        }
+
+        .blog-main {
+            margin-top: clamp(1rem, 2vw, 1.5rem);
+        }
+
+        .blog-title {
+            margin-bottom: clamp(1rem, 1.5vw, 1.25rem);
+        }
+
+        .blog-content-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .blog-sidebar {
+            display: none;
+        }
+
+        .blog-content p {
+            text-align: left;
+        }
+
+        .recent-posts-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .blog-tip-box {
+            flex-direction: column;
+            gap: 1rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .blog-title {
+            font-size: clamp(20px, 7vw, 28px);
+        }
+
+        .blog-meta {
+            font-size: clamp(11px, 0.9vw, 13px);
+            gap: 0.5rem;
+        }
+
+        .blog-content {
+            font-size: clamp(13px, 0.95vw, 15px);
+        }
+
+        .share-buttons {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    @media (max-width: 768px) {
+    .blog-title {
+        font-size: 1.6rem;   /* 👈 smaller title */
+        line-height: 1.25;
+    }
+}
+@media (max-width: 768px) {
+
+    /* Make main container a vertical flow */
+    .blog-content-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    /* ORDERING */
+    .blog-header {
+        order: 1;
+    }
+
+    .blog-featured-image-wrapper {
+        order: 2;
+    }
+
+    /* Table of Contents */
+    .sidebar-card:first-child {
+        order: 3;
+    }
+
+    /* Main content */
+    .blog-content {
+        order: 4;
+    }
+
+    /* Share section */
+    .sidebar-card:last-child {
+        order: 5;
+    }
+
+    /* Sidebar must behave like content on mobile */
+    .blog-sidebar {
+        display: contents;
+    }
+
+    .sidebar-sticky {
+        position: static;
+    }
+}
+/* ================= MOBILE FIXES ONLY ================= */
+@media (max-width: 768px) {
+
+    /* 1️⃣ Reduce blog title size */
+    .blog-title {
+        font-size: 1.7rem !important;
+        line-height: 1.25;
+        font-weight: 900;
+  }
+
+    /* 2️⃣ Re-order layout for mobile */
+    .blog-main {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .blog-header {
+        order: 1;
+    }
+
+    .blog-featured-image-wrapper {
+        order: 2;
+    }
+
+    .blog-sidebar {
+        display: block;
+        order: 3;
+        margin-top: 1.5rem;
+    }
+
+    .blog-content {
+        order: 4;
+    }
+
+    /* 3️⃣ Table of Contents card spacing */
+    .sidebar-card {
+        margin-bottom: 1.25rem;
+        padding: 1.25rem;
+    }
+
+    /* 4️⃣ Reduce Share box size */
+    .share-buttons {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .share-btn {
+        height: 48px;
+        font-size: 1rem;
+    }
+
+    /* 5️⃣ Hide sidebar sticky behavior on mobile */
+    .sidebar-sticky {
+        position: static;
+        top: auto;
+    }
+}
+/* ================= MOBILE READING OPTIMIZATION ================= */
+@media (max-width: 768px) {
+
+  /* Main blog title (already fixed earlier, just confirm) */
+  .blog-title {
+    font-size: 1.9rem;      /* 👈 reduced from huge */
+    line-height: 1.2;
+  }
+
+  /* "Content" heading (this was too big) */
+  .blog-content h1 {
+    font-size: 1.4rem;
+    margin-bottom: 0.75rem;
+  }
+
+  /* Section headings (The Noise We Call Normal, etc.) */
+  .blog-content h2 {
+    font-size: 1.35rem;     /* 👈 key fix */
+    line-height: 1.3;
+    margin-top: 2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .blog-content h3 {
+    font-size: 1.15rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.4rem;
+  }
+
+  /* Paragraph text */
+  .blog-content p {
+    font-size: 0.95rem;     /* 👈 perfect mobile reading size */
+    line-height: 1.65;
+    margin-bottom: 1rem;
+  }
+
+  /* Make intro paragraph feel softer */
+  .blog-content p:first-of-type {
+    font-size: 0.98rem;
+    color: #374151;
+  }
+
+}
+/* ===== MOBILE: MATCH SECTION HEADINGS WITH BLOG TITLE ===== */
+
+    
+/* ================= BLOG HEADING TONE FIX ================= */
+
+.blog-title {
+    font-weight: 700 !important;
+    font-size: clamp(26px, 4vw, 44px) !important;
+    letter-spacing: -0.01em;
+}
+
+.blog-content > h1 {
+    font-weight: 600 !important;
+    font-size: clamp(22px, 2.8vw, 32px) !important;
+}
+
+.blog-content h2 {
+    font-weight: 600 !important;
+    font-size: clamp(20px, 2.4vw, 28px) !important;
+    margin-top: 1.6rem;
+    margin-bottom: 0.6rem;
+}
+
+.blog-content h3 {
+    font-weight: 500 !important;
+    font-size: clamp(17px, 2vw, 22px) !important;
+}
+
+@media (max-width: 768px) {
+
+    .blog-title {
+        font-size: 1.6rem !important;
+        font-weight: 700 !important;
+    }
+
+    .blog-content > h1 {
+        font-size: 1.35rem !important;
+        font-weight: 600 !important;
+    }
+
+    .blog-content h2 {
+        font-size: 1.25rem !important;
+        font-weight: 600 !important;
+    }
+
+    .blog-content h3 {
+        font-size: 1.1rem !important;
+        font-weight: 500 !important;
+    }
+}
+
+
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="blog-container">
+    <!-- Blog Header -->
+    <div class="blog-header">
+        <h1 class="blog-title">{{ blog.title }}</h1>
+        <div class="blog-meta">
+            <div class="blog-meta-author">
+                <span>By {{ blog.author }}</span>
+            </div>
+            <div class="blog-meta-separator"></div>
+            <div class="blog-meta-item">{{ blog.created_at|date:"F d, Y" }}</div>
+            <div class="blog-meta-separator"></div>
+            <div class="blog-meta-item">5 min read</div>
+        </div>
+    </div>
+
+    <!-- Featured Image -->
+    {% if blog.image_url %}
+    <div class="blog-featured-image-wrapper">
+        <img src="{{ blog.image_url }}" alt="{{ blog.title }}" class="blog-featured-image">
+    </div>
+    {% else %}
+    <div class="blog-featured-image-wrapper">
+        <img src="{% static 'images/R-logo.webp' %}" alt="Aorbo Logo" class="blog-featured-image">
+    </div>
+    {% endif %}
+
+    <!-- Main Content Grid -->
+    <div class="blog-main">
+        <div class="blog-content-grid">
+            <!-- Article Content -->
+            <article class="blog-content" id="blogContent">
+                {{ blog.content|safe }}
+            </article>
+
+            <!-- Sidebar -->
+            <aside class="blog-sidebar">
+                <div class="sidebar-sticky">
+                    <!-- Table of Contents -->
+                    <div class="sidebar-card">
+                        <h3 class="sidebar-title">📚 Table of Contents</h3>
+                        <nav id="toc-nav">
+                            <!-- Generated by JavaScript -->
+                        </nav>
+                    </div>
+
+                    <!-- Share Buttons -->
+                    <div class="sidebar-card">
+                        <h3 class="sidebar-title">Share this Article</h3>
+                        <div class="share-buttons">
+                            <button class="share-btn" title="Share on Facebook">f</button>
+                            <button class="share-btn" title="Share on Twitter">𝕏</button>
+                            <button class="share-btn" title="Share on LinkedIn">in</button>
+                            <button class="share-btn" title="Copy Link">🔗</button>
+                        </div>
+                    </div>
+
+                   
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Recent Posts -->
+    {% if recent_blogs %}
+    <section class="recent-posts-section">
+        <h2 class="recent-posts-title">Recent Posts</h2>
+        <div class="recent-posts-grid">
+            {% for recent_blog in recent_blogs %}
+            <a href="{% url 'blog_detail' recent_blog.slug %}" class="post-card">
+                <div class="post-image">
+                    <img src="{{ recent_blog.image_url }}" alt="{{ recent_blog.title }}" loading="lazy">
+                </div>
+                <div class="post-content">
+                    <h3 class="post-title">{{ recent_blog.title }}</h3>
+                    <div class="post-date">{{ recent_blog.created_at|date:"F d, Y" }}</div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        <div class="pagination">
+    {% if recent_blogs.has_previous %}
+        <a href="?page={{ recent_blogs.previous_page_number }}" class="page-btn">← Previous</a>
+    {% endif %}
+
+    {% if recent_blogs.has_next %}
+        <a href="?page={{ recent_blogs.next_page_number }}" class="page-btn">Next →</a>
+    {% endif %}
+</div>
+
+    </section>
+    {% endif %}
+</main>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/blog_detail.js' %}" defer></script>
+{% endblock %}

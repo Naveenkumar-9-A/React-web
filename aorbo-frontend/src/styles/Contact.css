@@ -1,0 +1,135 @@
+.form-message {
+    display: none;
+}
+
+.hidden {
+    display: none;
+}
+
+.msg-icon,
+.icon {
+    height: 18px;
+    width: 18px;
+    margin-right: 5px;
+}
+
+.chat-btn {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 25px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 12px;
+}
+
+.chat-btn:hover {
+    background-color: #0056b3;
+}
+
+h2 {
+    font-size: 1.5rem;
+}
+
+.form-control,
+.form-select {
+    font-size: 0.9rem;
+    padding: 6px 10px;
+}
+
+.btn-primary {
+    padding: 6px 20px;
+    font-size: 0.9rem;
+}
+
+.contact-image {
+    margin-left: clamp(0px, 5vw, 4.5rem);
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px;
+    max-height: 450px;
+}
+
+@media (max-width: 576px) {
+    .contact-image {
+        display: block;
+        margin: 0 auto;
+    }
+}
+
+.card-custom {
+    padding: 16px;
+    font-size: 0.9rem;
+}
+
+.card-custom h4 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+}
+
+.social-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.support-text {
+    font-size: 0.85rem;
+    color: #555;
+}
+
+.lottie-animation {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    text-align: center;
+}
+
+.lottie-animation.show {
+    display: block;
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.lottie-animation.fadeOut {
+    animation: fadeOut 0.3s ease-out forwards;
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    to { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+}
+
+#lottieContainer {
+    width: 500px;
+    height: 500px;
+    margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+    h1 { font-size: 1.75rem; }
+    h2 { font-size: 1.5rem; }
+    h3 { font-size: 1.25rem; }
+    h4 { font-size: 1.125rem; }
+    h5 { font-size: 1rem; }
+    h6 { font-size: 0.875rem; }
+    p { font-size: 0.875rem; }
+}
+
+@media (max-width: 576px) {
+    .card {
+        margin-left: 10px;
+        margin-right: 10px;
+    }
+}
