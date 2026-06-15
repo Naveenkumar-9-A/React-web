@@ -309,7 +309,7 @@ export default function Home() {
           <div className="row g-4 justify-content-center mt-3">
             {[
               { tag: 'adventure', icon: '⛰️', title: 'Adventure Treks', text: 'For thrill-seekers and explorers who crave a challenge.', iconClass: 'icon-adventure' },
-              { tag: 'weekend', icon: 'weekend', title: 'Weekend Getaways', text: 'Perfect short escapes to unwind and recharge.', iconClass: 'icon-weekend' },
+              { tag: 'weekend', icon: '🌄', title: 'Weekend Getaways', text: 'Perfect short escapes to unwind and recharge.', iconClass: 'icon-weekend' },
               { tag: 'nature', icon: '🌲', title: 'Nature Escapes', text: 'Reconnect with nature through calm and scenic trails.', iconClass: 'icon-nature' },
               { tag: 'beach', icon: '🌊', title: 'Beach Trails', text: 'Walk along the coast, enjoy sunsets, and feel the sea breeze.', iconClass: 'icon-beach' },
               { tag: 'spiritual', icon: '💗', title: 'Spiritual Journeys', text: 'Find peace and purpose through sacred trails.', iconClass: 'icon-spiritual' },

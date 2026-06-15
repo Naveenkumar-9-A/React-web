@@ -180,6 +180,7 @@ export default function CardDetails() {
             <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', margin: '0 0 0.25rem' }}>Starting from</p>
             <p style={{ fontSize: '2rem', fontWeight: '700', color: yellow, margin: '0 0 0.25rem', lineHeight: 1 }}>₹{trek.price_start}</p>
             <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', margin: '0 0 1.25rem' }}>per person onwards*</p>
+<<<<<<< Updated upstream
             {/* <button
               style={{ width: '100%', background: yellow, color: '#1a1a1a', border: 'none', borderRadius: '10px', padding: '12px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', transition: 'background 0.2s' }}
               onMouseEnter={e => e.currentTarget.style.background = '#f5d800'}
@@ -187,6 +188,9 @@ export default function CardDetails() {
             >
               Book Now
             </button> */}
+=======
+           
+>>>>>>> Stashed changes
           </div>
 
           {/* TRIP INFO */}
