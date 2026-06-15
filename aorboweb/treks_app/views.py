@@ -509,7 +509,7 @@ def api_featured_treks(request):
         if hasattr(item, 'operators_list') and item.operators_list:
             operators_list = [op.strip() for op in item.operators_list.split(',')]
         else:
-            operators_list = ["Aorbo Verified Team"]
+            operators_list = ["Aorbo Certified Partner"]
 
         results.append({
             "id": item.id,
@@ -544,7 +544,7 @@ def api_trek_detail(request, slug):
     # ✅ operators is ManyToManyField to Operator model
     operators_list = list(trek_item.operators.values_list('name', flat=True))
     if not operators_list:
-        operators_list = ["Aorbo Verified Team"]
+        operators_list = ["Aorbo Certified Partner"]
 
     # ✅ trek_points is ManyToManyField to TrekPoint model (famous places)
     places_list = list(trek_item.trek_points.values_list('name', flat=True))
@@ -630,7 +630,7 @@ def api_travel_your_way(request):
         if hasattr(item, 'operators_list') and item.operators_list:
             operators_list = [op.strip() for op in item.operators_list.split(',')]
         else:
-            operators_list = ["Aorbo Verified Team"]
+            operators_list = ["Aorbo Certified Partner"]
 
         results.append({
             "id": item.id,
