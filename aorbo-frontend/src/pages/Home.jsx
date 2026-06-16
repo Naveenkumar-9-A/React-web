@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { MapPin, Clock, Calendar, ShieldCheck, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import '../styles/Home.css';
 
 export default function Home() {
@@ -27,7 +28,6 @@ export default function Home() {
 
   const fetchTreks = async (page = 1, tag = '') => {
     try {
-      // Added absolute backend server path mapping
       const res = await fetch(`${BACKEND_URL}/api/treks/?page=${page}&tag=${tag}`);
       const data = await res.json();
       setFeaturedTreks(data.results || []);
@@ -65,7 +65,6 @@ export default function Home() {
     setShowSuggestions(false);
   };
 
-  // Close suggestions on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (suggestionRef.current && !suggestionRef.current.contains(e.target)) {
@@ -81,6 +80,15 @@ export default function Home() {
     params.set('page', page);
     return `?${params.toString()}`;
   };
+
+  const getPaginationPages = () => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    if (currentPage <= 3) return [1, 2, 3, 4, '...', totalPages];
+    if (currentPage >= totalPages - 2) return [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+  };
+
+  const paginationBtnStyle = 'flex items-center justify-center w-9 h-9 rounded-full text-sm font-semibold transition-all duration-200 select-none text-decoration-none';
 
   return (
     <>
@@ -116,7 +124,6 @@ export default function Home() {
               Search for your next trek or destination and start planning an unforgettable experience.
             </p>
 
-            {/* Search with dropdown suggestions */}
             <form className="hero-search-form" onSubmit={handleSearchSubmit}>
               <div className="hero-search-wrapper" ref={suggestionRef}>
                 <input
@@ -155,29 +162,28 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ============ 2. FEATURED DESTINATIONS ============ */}
-      <section className="py-4 secondbg" id="featured-destinations">
+      {/* ============ 2. FEATURED DESTINATIONS (REFINED SLATE BLUE THEME) ============ */}
+      <section className="py-5" id="featured-destinations" style={{ backgroundColor: '#121824' }}>
         <div className="container">
-          <h2 className="text-center fw-bold mb-2">Featured Destinations</h2>
+          <h2 className="text-center fw-bold mb-2 text-white">Featured Destinations</h2>
 
           {selectedTag ? (
             <p className="text-center text-muted mb-4">
               Showing results for{' '}
-              <span className="fw-semibold text-dark">
+              <span className="fw-semibold text-warning">
                 {selectedTag.charAt(0).toUpperCase() + selectedTag.slice(1)}
               </span>
-              <Link to="/#featured-destinations" className="ms-2 small"> Reset </Link>
+              <Link to="/#featured-destinations" className="ms-2 small text-warning text-decoration-none"> Reset </Link>
             </p>
           ) : (
-            <p className="text-center text-muted mb-4">
+            <p className="text-center text-light text-opacity-50 mb-5">
               Explore our most loved treks and travel circuits across India.
             </p>
           )}
 
-          <div className="row g-3" id="featured-trek-grid">
+          <div className="row g-4" id="featured-trek-grid">
             {featuredTreks.length > 0 ? (
               featuredTreks.map((trek, index) => {
-                // Prepend Python backend storage root URL if it's a relative path lookup
                 const resolvedImageUrl = trek.images && trek.images[0] && trek.images[0].image_url
                   ? trek.images[0].image_url.startsWith('http') ? trek.images[0].image_url : `${BACKEND_URL}${trek.images[0].image_url}`
                   : '/images/placeholder-trek.jpg';
@@ -187,45 +193,75 @@ export default function Home() {
                     key={trek.id}
                     className={`col-12 col-sm-6 col-md-4 col-lg-3 ${index >= 8 ? 'extra-trek-card d-none' : ''}`}
                   >
-                    <Link
-                      to={`/treks/${trek.id}`}
-                      className="premium-card h-100 w-100 rounded-4 overflow-hidden text-decoration-none text-dark d-block"
-                    >
-                      {/* IMAGE CONTAINER FRAME */}
-                      <div className="trek-card-image-wrapper ratio ratio-4x3">
-                        <div className="image-inner">
-                          <img src={resolvedImageUrl} alt={trek.name} loading="lazy" />
-                          <div className="price-pill">
-                            <div className="price-onwards">Onwards*</div>
-                            <div className="price-value">₹{trek.price_start}</div>
+                    <Link to={`/treks/${trek.id}`} className="text-decoration-none d-block h-100">
+                      <div className="bolt-premium-card">
+                        
+                        {/* Glow and Shimmer Lines */}
+                        <div className="bolt-shine" />
+                        <div className="bolt-top-glow" />
+
+                        {/* Image Wrap (No Featured Tag) */}
+                        <div className="bolt-image-wrapper">
+                          <img
+                            src={resolvedImageUrl}
+                            alt={trek.name}
+                            loading="lazy"
+                            className="bolt-card-img"
+                          />
+                          <div className="bolt-image-overlay" />
+                          <div className="bolt-image-shimmer" />
+
+                          {/* Pricing Elements Badge */}
+                          <div className="bolt-price-badge">
+                            <p className="bolt-price-onwards">Onwards*</p>
+                            <p className="bolt-price-value">₹{trek.price_start?.toLocaleString('en-IN')}</p>
                           </div>
                         </div>
-                      </div>
 
-                      {/* CONTENT DETAILS BAR */}
-                      <div className="p-3 card-content">
-                        <div>
-                          <h5 className="fw-bold mb-1">
-                            {trek.name.charAt(0).toUpperCase() + trek.name.slice(1).toLowerCase()}
-                          </h5>
-                          <p className="small mb-2 location-text">📍 {trek.state}</p>
-                          <p className="small mb-1 days"><strong>Duration:</strong> {trek.duration_days} Days</p>
-                          <p className="small mb-2 days"><strong>Departure:</strong> {trek.operating_days?.toUpperCase()}</p>
-                        </div>
-
-                        {/* TRUSTED INDIE OPERATORS CHIP FOOTER */}
-                        {trek.operators && trek.operators.length > 0 && (
-                          <div className="operator-grid-wrapper border-top pt-2 mt-2">
-                            <div className="d-flex flex-wrap justify-content-center gap-1">
-                              {trek.operators.slice(0, 3).map((op, i) => (
-                                <span key={i} className="operator-badge-premium">{op}</span>
-                              ))}
-                              {trek.operators.length > 3 && (
-                                <span className="operator-badge-premium">+{trek.operators.length - 3}</span>
-                              )}
+                        {/* Card Info Content */}
+                        <div className="bolt-card-body">
+                          <div>
+                            <h3 className="bolt-card-title">
+                              {trek.name.charAt(0).toUpperCase() + trek.name.slice(1).toLowerCase()}
+                            </h3>
+                            <div className="bolt-location-row">
+                              <MapPin className="bolt-pin-icon" />
+                              <span className="bolt-location-text">{trek.state}</span>
                             </div>
                           </div>
-                        )}
+
+                          <div className="bolt-card-divider" />
+
+                          {/* Duration and Calendar fields */}
+                          <div className="bolt-specs-container">
+                            <div className="bolt-spec-item">
+                              <Clock className="bolt-spec-icon" />
+                              <span className="bolt-spec-text">
+                                <span className="bolt-spec-label">Duration: </span>
+                                <span className="bolt-spec-val">{trek.duration_days} Days</span>
+                              </span>
+                            </div>
+                            <div className="bolt-spec-item">
+                              <Calendar className="bolt-spec-icon" />
+                              <span className="bolt-spec-text">
+                                <span className="bolt-spec-label">Departure: </span>
+                                <span className="bolt-spec-val">{trek.operating_days?.toUpperCase()}</span>
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Custom Partner Footer Bar */}
+                          <div className="bolt-card-footer">
+                            <div className="bolt-partner-badge">
+                              <ShieldCheck className="bolt-shield-icon" />
+                              <span className="bolt-partner-text">Aorbo Certified Partner</span>
+                            </div>
+                            <div className="bolt-arrow-circle">
+                              <ArrowUpRight className="bolt-arrow-icon" />
+                            </div>
+                          </div>
+                        </div>
+
                       </div>
                     </Link>
                   </div>
@@ -238,61 +274,37 @@ export default function Home() {
             )}
           </div>
 
-          {/* PAGINATION ENGINE CONTROLS */}
+          {/* Premium Pagination Module */}
           {totalPages > 1 && (
-            <nav className="mt-5">
-              <ul className="pagination justify-content-center align-items-center">
-                <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                  {currentPage > 1 ? (
-                    <Link className="page-link" to={getPageUrl(currentPage - 1)}>‹</Link>
-                  ) : (
-                    <span className="page-link">‹</span>
-                  )}
-                </li>
+            <div className="bolt-pagination-wrapper">
+              <Link
+                to={currentPage > 1 ? getPageUrl(currentPage - 1) : '#'}
+                className={`bolt-pag-btn ${currentPage === 1 ? 'bolt-pag-disabled' : ''}`}
+              >
+                <ChevronLeft style={{ width: '16px', height: '16px' }} />
+              </Link>
 
-                <li className="page-item d-sm-none active">
-                  <span className="page-link">{currentPage}</span>
-                </li>
+              {getPaginationPages().map((page, i) =>
+                page === '...' ? (
+                  <span key={`ell-${i}`} className="bolt-pag-ellipsis">···</span>
+                ) : (
+                  <Link
+                    key={page}
+                    to={getPageUrl(page)}
+                    className={`bolt-pag-btn ${page === currentPage ? 'bolt-pag-active' : ''}`}
+                  >
+                    {page}
+                  </Link>
+                )
+              )}
 
-                {currentPage > 2 && (
-                  <li className="page-item d-none d-sm-inline">
-                    <Link className="page-link" to={getPageUrl(1)}>1</Link>
-                  </li>
-                )}
-                {currentPage > 3 && (
-                  <li className="page-item disabled d-none d-sm-inline">
-                    <span className="page-link">…</span>
-                  </li>
-                )}
-
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(i => i >= currentPage - 1 && i <= currentPage + 1)
-                  .map(i => (
-                    <li key={i} className={`page-item d-none d-sm-inline ${currentPage === i ? 'active' : ''}`}>
-                      <Link className="page-link" to={getPageUrl(i)}>{i}</Link>
-                    </li>
-                  ))}
-
-                {currentPage < totalPages - 2 && (
-                  <li className="page-item disabled d-none d-sm-inline">
-                    <span className="page-link">…</span>
-                  </li>
-                )}
-                {currentPage < totalPages - 1 && (
-                  <li className="page-item d-none d-sm-inline">
-                    <Link className="page-link" to={getPageUrl(totalPages)}>{totalPages}</Link>
-                  </li>
-                )}
-
-                <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                  {currentPage < totalPages ? (
-                    <Link className="page-link" to={getPageUrl(currentPage + 1)}>›</Link>
-                  ) : (
-                    <span className="page-link">›</span>
-                  )}
-                </li>
-              </ul>
-            </nav>
+              <Link
+                to={currentPage < totalPages ? getPageUrl(currentPage + 1) : '#'}
+                className={`bolt-pag-btn ${currentPage === totalPages ? 'bolt-pag-disabled' : ''}`}
+              >
+                <ChevronRight style={{ width: '16px', height: '16px' }} />
+              </Link>
+            </div>
           )}
         </div>
       </section>
@@ -302,8 +314,7 @@ export default function Home() {
         <div className="container text-center">
           <h2 className="tyw-title mb-2">Travel Your Way</h2>
           <p className="tyw-subtitle mb-4">
-            Whether you seek adventure, peace, or a quick weekend escape,
-            find the journey that fits your style.
+            Whether you seek adventure, peace, or a quick weekend escape, find the journey that fits your style.
           </p>
 
           <div className="row g-4 justify-content-center mt-3">
@@ -334,8 +345,7 @@ export default function Home() {
         <div className="container text-center">
           <h2 className="why-title mb-3">Why Trek With AORBO TREKS?</h2>
           <p className="why-subtitle mb-5">
-            We're more than a platform; we are your trusted partner in adventure,
-            committed to making every journey safe, seamless, and unforgettable.
+            We're more than a platform; we are your trusted partner in adventure, committed to making every journey safe, seamless, and unforgettable.
           </p>
 
           <div className="row g-4 justify-content-center">
