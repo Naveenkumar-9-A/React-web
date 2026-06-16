@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import '../styles/Home.css';
 
@@ -14,8 +16,103 @@ export default function Home() {
   const [searchParams] = useSearchParams();
   const suggestionRef = useRef(null);
 
-  // 🛰️ BASE DOMAIN URL to map dynamic images from your active Django backend
   const BACKEND_URL = 'http://127.0.0.1:8000';
+
+  // ================= CARD STYLES (same as TravelYourWay.jsx) =================
+  const cardStyles = {
+    premiumCard: {
+      backgroundColor: '#ffffff',
+      borderRadius: '16px',
+      border: '1px solid #e5e7eb',
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      textDecoration: 'none',
+      color: 'inherit',
+      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+      transition: 'all 0.3s ease',
+      height: '100%'
+    },
+    imageWrapper: {
+      position: 'relative',
+      width: '100%',
+      paddingTop: '75%',
+      overflow: 'hidden'
+    },
+    imageInner: {
+      position: 'absolute',
+      inset: 0,
+      overflow: 'hidden'
+    },
+    cardImg: {
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      display: 'block',
+      transition: 'transform 0.5s ease'
+    },
+    pricePill: {
+      position: 'absolute',
+      bottom: '16px',
+      right: '16px',
+      background: 'linear-gradient(135deg, #ff7a18, #ff3d00)',
+      color: '#fff',
+      padding: '8px 14px',
+      borderRadius: '40px',
+      boxShadow: '0 6px 16px rgba(0,0,0,.35)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-end',
+      gap: '2px'
+    },
+    priceOnwards: {
+      fontSize: '0.5rem',
+      fontWeight: '600',
+      letterSpacing: '0.05em',
+      opacity: '0.9'
+    },
+    priceValue: {
+      fontSize: '0.95rem',
+      fontWeight: '800',
+      lineHeight: '1'
+    },
+    cardContent: {
+      padding: '1rem',
+      display: 'flex',
+      flexDirection: 'column',
+      flexGrow: 1
+    },
+    locationText: {
+      color: '#4b5563',
+      fontWeight: '500',
+      fontSize: '0.9rem',
+      margin: '0 0 0.5rem 0'
+    },
+    days: {
+      fontSize: '13px',
+      color: '#374151',
+      margin: '0 0 0.25rem 0'
+    },
+    operatorGridWrapper: {
+      marginTop: 'auto',
+      paddingTop: '0.75rem',
+      borderTop: '1px solid #e5e7eb'
+    },
+    badgeContainer: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: '6px'
+    },
+    operatorBadgePremium: {
+      backgroundColor: '#f97316',
+      color: '#ffffff',
+      fontSize: '0.7rem',
+      fontWeight: '600',
+      padding: '5px 12px',
+      borderRadius: '16px',
+      border: 'none'
+    }
+  };
 
   useEffect(() => {
     const tag = searchParams.get('tag') || '';
@@ -27,7 +124,6 @@ export default function Home() {
 
   const fetchTreks = async (page = 1, tag = '') => {
     try {
-      // Added absolute backend server path mapping
       const res = await fetch(`${BACKEND_URL}/api/treks/?page=${page}&tag=${tag}`);
       const data = await res.json();
       setFeaturedTreks(data.results || []);
@@ -65,7 +161,6 @@ export default function Home() {
     setShowSuggestions(false);
   };
 
-  // Close suggestions on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (suggestionRef.current && !suggestionRef.current.contains(e.target)) {
@@ -84,6 +179,17 @@ export default function Home() {
 
   return (
     <>
+      {/* ANIMATION STYLES */}
+      <style>{`
+        @keyframes floatPrice {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
+        .animated-price-pill { animation: floatPrice 3s ease-in-out infinite; }
+        .interactive-trek-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0,0,0,.12); }
+        .interactive-trek-card:hover img { transform: scale(1.08); }
+      `}</style>
+
       {/* ============ 1. HERO SECTION WITH FULL-SCREEN CAROUSEL ============ */}
       <section className="hero-landing p-0">
         <div id="heroCarousel" className="carousel slide hero-carousel" data-bs-ride="carousel" data-bs-interval="4000">
@@ -115,8 +221,6 @@ export default function Home() {
             <p className="hero-subtitle mb-4">
               Search for your next trek or destination and start planning an unforgettable experience.
             </p>
-
-            {/* Search with dropdown suggestions */}
             <form className="hero-search-form" onSubmit={handleSearchSubmit}>
               <div className="hero-search-wrapper" ref={suggestionRef}>
                 <input
@@ -134,7 +238,6 @@ export default function Home() {
                     <path d="M10 4a6 6 0 0 1 4.8 9.6l3.8 3.8a1 1 0 0 1-1.4 1.4l-3.8-3.8A6 6 0 1 1 10 4zm0 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />
                   </svg>
                 </button>
-
                 {showSuggestions && suggestions.length > 0 && (
                   <div id="search-suggestions" className="search-suggestions" style={{ display: 'block' }}>
                     {suggestions.map((trek) => (
@@ -177,9 +280,10 @@ export default function Home() {
           <div className="row g-3" id="featured-trek-grid">
             {featuredTreks.length > 0 ? (
               featuredTreks.map((trek, index) => {
-                // Prepend Python backend storage root URL if it's a relative path lookup
                 const resolvedImageUrl = trek.images && trek.images[0] && trek.images[0].image_url
-                  ? trek.images[0].image_url.startsWith('http') ? trek.images[0].image_url : `${BACKEND_URL}${trek.images[0].image_url}`
+                  ? trek.images[0].image_url.startsWith('http')
+                    ? trek.images[0].image_url
+                    : `${BACKEND_URL}${trek.images[0].image_url}`
                   : '/images/placeholder-trek.jpg';
 
                 return (
@@ -187,41 +291,51 @@ export default function Home() {
                     key={trek.id}
                     className={`col-12 col-sm-6 col-md-4 col-lg-3 ${index >= 8 ? 'extra-trek-card d-none' : ''}`}
                   >
+                    {/* ── CARD (same structure as TravelYourWay.jsx) ── */}
                     <Link
                       to={`/treks/${trek.id}`}
-                      className="premium-card h-100 w-100 rounded-4 overflow-hidden text-decoration-none text-dark d-block"
+                      style={cardStyles.premiumCard}
+                      className="interactive-trek-card"
                     >
-                      {/* IMAGE CONTAINER FRAME */}
-                      <div className="trek-card-image-wrapper ratio ratio-4x3">
-                        <div className="image-inner">
-                          <img src={resolvedImageUrl} alt={trek.name} loading="lazy" />
-                          <div className="price-pill">
-                            <div className="price-onwards">Onwards*</div>
-                            <div className="price-value">₹{trek.price_start}</div>
+                      {/* IMAGE FRAME */}
+                      <div style={cardStyles.imageWrapper}>
+                        <div style={cardStyles.imageInner}>
+                          <img src={resolvedImageUrl} alt={trek.name} style={cardStyles.cardImg} loading="lazy" />
+                          <div style={cardStyles.pricePill} className="animated-price-pill">
+                            <span style={cardStyles.priceOnwards}>Onwards*</span>
+                            <span style={cardStyles.priceValue}>₹{trek.price_start}</span>
                           </div>
                         </div>
                       </div>
 
-                      {/* CONTENT DETAILS BAR */}
-                      <div className="p-3 card-content">
-                        <div>
-                          <h5 className="fw-bold mb-1">
-                            {trek.name.charAt(0).toUpperCase() + trek.name.slice(1).toLowerCase()}
-                          </h5>
-                          <p className="small mb-2 location-text">📍 {trek.state}</p>
-                          <p className="small mb-1 days"><strong>Duration:</strong> {trek.duration_days} Days</p>
-                          <p className="small mb-2 days"><strong>Departure:</strong> {trek.operating_days?.toUpperCase()}</p>
-                        </div>
+                      {/* DETAILS CONTENT */}
+                      <div style={cardStyles.cardContent}>
+                        <h5 style={{ fontSize: '1.2rem', fontWeight: '700', margin: '0 0 0.25rem 0', color: '#111827' }}>
+                          {trek.name.charAt(0).toUpperCase() + trek.name.slice(1).toLowerCase()}
+                        </h5>
 
-                        {/* TRUSTED INDIE OPERATORS CHIP FOOTER */}
+                        <p style={cardStyles.locationText}>📍 {trek.state}</p>
+
+                        <p style={cardStyles.days}>
+                          <strong>Duration:</strong> {trek.duration_days} Days
+                        </p>
+                        <p style={{ ...cardStyles.days, marginBottom: '1rem' }}>
+                          <strong>Departure:</strong> {trek.operating_days?.toUpperCase()}
+                        </p>
+
+                        {/* OPERATORS CHIP */}
                         {trek.operators && trek.operators.length > 0 && (
-                          <div className="operator-grid-wrapper border-top pt-2 mt-2">
-                            <div className="d-flex flex-wrap justify-content-center gap-1">
+                          <div style={cardStyles.operatorGridWrapper}>
+                            <div style={cardStyles.badgeContainer}>
                               {trek.operators.slice(0, 3).map((op, i) => (
-                                <span key={i} className="operator-badge-premium">{op}</span>
+                                <span key={i} style={cardStyles.operatorBadgePremium}>
+                                  {op}
+                                </span>
                               ))}
                               {trek.operators.length > 3 && (
-                                <span className="operator-badge-premium">+{trek.operators.length - 3}</span>
+                                <span style={cardStyles.operatorBadgePremium}>
+                                  +{trek.operators.length - 3}
+                                </span>
                               )}
                             </div>
                           </div>
@@ -238,7 +352,7 @@ export default function Home() {
             )}
           </div>
 
-          {/* PAGINATION ENGINE CONTROLS */}
+          {/* PAGINATION */}
           {totalPages > 1 && (
             <nav className="mt-5">
               <ul className="pagination justify-content-center align-items-center">
@@ -305,7 +419,6 @@ export default function Home() {
             Whether you seek adventure, peace, or a quick weekend escape,
             find the journey that fits your style.
           </p>
-
           <div className="row g-4 justify-content-center mt-3">
             {[
               { tag: 'adventure', icon: '⛰️', title: 'Adventure Treks', text: 'For thrill-seekers and explorers who crave a challenge.', iconClass: 'icon-adventure' },
@@ -337,7 +450,6 @@ export default function Home() {
             We're more than a platform; we are your trusted partner in adventure,
             committed to making every journey safe, seamless, and unforgettable.
           </p>
-
           <div className="row g-4 justify-content-center">
             {[
               { icon: '🎯', title: 'Tailored Experience', text: 'Customize your trek according to your preferences and comfort level.' },
