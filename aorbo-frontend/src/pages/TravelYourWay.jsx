@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { MapPin, Clock, Calendar, ShieldCheck, ArrowUpRight } from 'lucide-react';
+import { MapPin, Clock, Calendar, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import '../styles/Home.css';
 
 const TAG_META = {
@@ -12,23 +12,23 @@ const TAG_META = {
   camping:   { icon: '🏕️', label: 'Camping & Bonfire',  subtitle: 'Experience starlit nights and warm bonfires in the wild.' },
 };
 
-// ── Module-level cache: survives re-renders & tag switches within a session ──
+// Cache keyed by "tag__page" e.g. "adventure__1"
 const trekCache = {};
-
-// ── Tracks tags currently being fetched so we never fire two requests for the same tag ──
-const inFlight = new Set();
-
-// 8 skeleton placeholder slots while fetching
-const SKELETON_COUNT = 8;
+const inFlight  = new Set();
+const SKELETON_COUNT = 12;
 
 export default function TravelYourWay() {
-  const [searchParams] = useSearchParams();
-  const [treks, setTreks]     = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [searchParams]  = useSearchParams();
+  const [treks, setTreks]           = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [totalPages, setTotalPages] = useState(1);
   const abortRef = useRef(null);
 
-  const selectedTag  = (searchParams.get('tag') || 'adventure').toLowerCase();
+  const selectedTag  = (searchParams.get('tag')  || 'adventure').toLowerCase();
+  const currentPage  = parseInt(searchParams.get('page') || '1', 10);
   const BACKEND_URL  = 'http://127.0.0.1:8000';
+
+  const cacheKey = `${selectedTag}__${currentPage}`;
 
   const meta = TAG_META[selectedTag] || {
     icon: '🗺️',
@@ -36,38 +36,41 @@ export default function TravelYourWay() {
     subtitle: 'Showing treks and trips that match your travel style.',
   };
 
+  // ── Main fetch ──
   useEffect(() => {
-    // Hit cache → instant render, no network
-    if (trekCache[selectedTag]) {
-      setTreks(trekCache[selectedTag]);
+    if (trekCache[cacheKey]) {
+      setTreks(trekCache[cacheKey].results);
+      setTotalPages(trekCache[cacheKey].totalPages);
       setLoading(false);
       return;
     }
 
-    // Already fetching this tag (React 18 Strict Mode double-invoke guard)
-    if (inFlight.has(selectedTag)) return;
+    if (inFlight.has(cacheKey)) return;
 
-    // Cancel previous tag's in-flight request
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
-    inFlight.add(selectedTag);
+    inFlight.add(cacheKey);
     setLoading(true);
 
-    fetch(`${BACKEND_URL}/api/travel-your-way/?tag=${selectedTag}`, {
+    fetch(`${BACKEND_URL}/api/travel-your-way/?tag=${selectedTag}&page=${currentPage}`, {
       signal: controller.signal,
     })
       .then((r) => r.json())
       .then((data) => {
-        const results = data.results || [];
-        trekCache[selectedTag] = results;
-        inFlight.delete(selectedTag);
+        const results    = data.results    || [];
+        const totalPages = data.total_pages || 1;
+        trekCache[cacheKey] = { results, totalPages };
+        inFlight.delete(cacheKey);
         setTreks(results);
+        setTotalPages(totalPages);
         setLoading(false);
+        // Scroll to top of grid on page change
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       })
       .catch((err) => {
-        inFlight.delete(selectedTag);
+        inFlight.delete(cacheKey);
         if (err.name !== 'AbortError') {
           console.error('Failed to resolve custom category items:', err);
           setLoading(false);
@@ -76,35 +79,44 @@ export default function TravelYourWay() {
 
     return () => {
       controller.abort();
-      inFlight.delete(selectedTag);
+      inFlight.delete(cacheKey);
     };
-  }, [selectedTag]);
+  }, [cacheKey]);
 
-  // Prefetch all other tags silently after current tag loads
-  // No `loading` in deps — runs once per selectedTag change after render
+  // ── Prefetch next page in background ──
   useEffect(() => {
-    const tags = Object.keys(TAG_META).filter(
-      (t) => t !== selectedTag && !trekCache[t] && !inFlight.has(t)
-    );
-    if (tags.length === 0) return;
+    if (loading || currentPage >= totalPages) return;
+    const nextKey = `${selectedTag}__${currentPage + 1}`;
+    if (trekCache[nextKey] || inFlight.has(nextKey)) return;
 
-    // Stagger prefetches so they don't all hit Django at once
-    const timers = tags.map((tag, i) =>
-      setTimeout(() => {
-        if (trekCache[tag] || inFlight.has(tag)) return;
-        inFlight.add(tag);
-        fetch(`${BACKEND_URL}/api/travel-your-way/?tag=${tag}`)
-          .then((r) => r.json())
-          .then((data) => {
-            trekCache[tag] = data.results || [];
-            inFlight.delete(tag);
-          })
-          .catch(() => inFlight.delete(tag));
-      }, (i + 1) * 600)   // 600ms gap between each prefetch
-    );
+    const timer = setTimeout(() => {
+      if (trekCache[nextKey] || inFlight.has(nextKey)) return;
+      inFlight.add(nextKey);
+      fetch(`${BACKEND_URL}/api/travel-your-way/?tag=${selectedTag}&page=${currentPage + 1}`)
+        .then((r) => r.json())
+        .then((data) => {
+          trekCache[nextKey] = { results: data.results || [], totalPages: data.total_pages || 1 };
+          inFlight.delete(nextKey);
+        })
+        .catch(() => inFlight.delete(nextKey));
+    }, 800);
 
-    return () => timers.forEach(clearTimeout);
-  }, [selectedTag]);
+    return () => clearTimeout(timer);
+  }, [loading, selectedTag, currentPage, totalPages]);
+
+  // ── Pagination helpers ──
+  const getPageUrl = (page) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('page', page);
+    return `?${params.toString()}`;
+  };
+
+  const getPaginationPages = () => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    if (currentPage <= 3) return [1, 2, 3, 4, '...', totalPages];
+    if (currentPage >= totalPages - 2) return [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+  };
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
@@ -129,7 +141,7 @@ export default function TravelYourWay() {
             {Object.entries(TAG_META).map(([tag, info]) => (
               <Link
                 key={tag}
-                to={`/travel-your-way?tag=${tag}`}
+                to={`/travel-your-way?tag=${tag}&page=1`}
                 className={`tyw-tag-pill ${selectedTag === tag ? 'tyw-tag-pill--active' : ''}`}
               >
                 {info.icon} {info.label}
@@ -144,7 +156,6 @@ export default function TravelYourWay() {
         <div className="container">
 
           {loading ? (
-            /* ── SKELETON GRID ── */
             <div className="row g-4">
               {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
                 <div key={i} className="col-12 col-sm-6 col-md-4 col-lg-3">
@@ -164,79 +175,109 @@ export default function TravelYourWay() {
             </div>
 
           ) : treks.length > 0 ? (
-            /* ── REAL CARDS ── */
-            <div className="row g-4">
-              {treks.map((trek) => {
-                const resolvedImageUrl =
-                  trek.images && trek.images[0] && trek.images[0].image_url
-                    ? trek.images[0].image_url.startsWith('http')
-                      ? trek.images[0].image_url
-                      : `${BACKEND_URL}${trek.images[0].image_url}`
-                    : '/images/placeholder-trek.jpg';
+            <>
+              <div className="row g-4">
+                {treks.map((trek) => {
+                  const resolvedImageUrl =
+                    trek.images && trek.images[0] && trek.images[0].image_url
+                      ? trek.images[0].image_url.startsWith('http')
+                        ? trek.images[0].image_url
+                        : `${BACKEND_URL}${trek.images[0].image_url}`
+                      : '/images/placeholder-trek.jpg';
 
-                return (
-                  <div key={trek.id} className="col-12 col-sm-6 col-md-4 col-lg-3">
-                    <Link to={`/treks/${trek.id}`} className="text-decoration-none d-block h-100">
-                      <div className="bolt-premium-card">
-                        <div className="bolt-shine" />
-                        <div className="bolt-top-glow" />
+                  return (
+                    <div key={trek.id} className="col-12 col-sm-6 col-md-4 col-lg-3">
+                      <Link to={`/treks/${trek.id}`} className="text-decoration-none d-block h-100">
+                        <div className="bolt-premium-card">
+                          <div className="bolt-shine" />
+                          <div className="bolt-top-glow" />
 
-                        <div className="bolt-image-wrapper">
-                          <img src={resolvedImageUrl} alt={trek.name} loading="lazy" className="bolt-card-img" />
-                          <div className="bolt-image-overlay" />
-                          <div className="bolt-image-shimmer" />
-                          <div className="bolt-price-badge">
-                            <p className="bolt-price-onwards">Onwards*</p>
-                            <p className="bolt-price-value">₹{trek.price_start?.toLocaleString('en-IN')}</p>
-                          </div>
-                        </div>
-
-                        <div className="bolt-card-body">
-                          <div>
-                            <h3 className="bolt-card-title">
-                              {trek.name.charAt(0).toUpperCase() + trek.name.slice(1).toLowerCase()}
-                            </h3>
-                            <div className="bolt-location-row">
-                              <MapPin className="bolt-pin-icon" />
-                              <span className="bolt-location-text">{trek.state}</span>
+                          <div className="bolt-image-wrapper">
+                            <img src={resolvedImageUrl} alt={trek.name} loading="lazy" className="bolt-card-img" />
+                            <div className="bolt-image-overlay" />
+                            <div className="bolt-image-shimmer" />
+                            <div className="bolt-price-badge">
+                              <p className="bolt-price-onwards">Onwards*</p>
+                              <p className="bolt-price-value">₹{trek.price_start?.toLocaleString('en-IN')}</p>
                             </div>
                           </div>
 
-                          <div className="bolt-card-divider" />
+                          <div className="bolt-card-body">
+                            <div>
+                              <h3 className="bolt-card-title">
+                                {trek.name.charAt(0).toUpperCase() + trek.name.slice(1).toLowerCase()}
+                              </h3>
+                              <div className="bolt-location-row">
+                                <MapPin className="bolt-pin-icon" />
+                                <span className="bolt-location-text">{trek.state}</span>
+                              </div>
+                            </div>
 
-                          <div className="bolt-specs-container">
-                            <div className="bolt-spec-item">
-                              <Clock className="bolt-spec-icon" />
-                              <span className="bolt-spec-text">
-                                <span className="bolt-spec-label">Duration: </span>
-                                <span className="bolt-spec-val">{trek.duration_days} Days</span>
-                              </span>
-                            </div>
-                            <div className="bolt-spec-item">
-                              <Calendar className="bolt-spec-icon" />
-                              <span className="bolt-spec-text">
-                                <span className="bolt-spec-label">Departure: </span>
-                                <span className="bolt-spec-val">{trek.operating_days?.toUpperCase()}</span>
-                              </span>
-                            </div>
-                          </div>
+                            <div className="bolt-card-divider" />
 
-                          <div className="bolt-card-footer">
-                            <div className="bolt-partner-badge">
-                              <ShieldCheck className="bolt-shield-icon" />
-                              <span className="bolt-partner-text">Aorbo Certified Partner</span>
+                            <div className="bolt-specs-container">
+                              <div className="bolt-spec-item">
+                                <Clock className="bolt-spec-icon" />
+                                <span className="bolt-spec-text">
+                                  <span className="bolt-spec-label">Duration: </span>
+                                  <span className="bolt-spec-val">{trek.duration_days} Days</span>
+                                </span>
+                              </div>
+                              <div className="bolt-spec-item">
+                                <Calendar className="bolt-spec-icon" />
+                                <span className="bolt-spec-text">
+                                  <span className="bolt-spec-label">Departure: </span>
+                                  <span className="bolt-spec-val">{trek.operating_days?.toUpperCase()}</span>
+                                </span>
+                              </div>
                             </div>
-                            <div className="bolt-arrow-circle">
-                              <ArrowUpRight className="bolt-arrow-icon" />
+
+                            <div className="bolt-card-footer">
+                              <div className="bolt-arrow-circle">
+                                <ArrowUpRight className="bolt-arrow-icon" />
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </Link>
-                  </div>
-                );
-              })}
-            </div>
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* ── PAGINATION ── */}
+              {totalPages > 1 && (
+                <div className="bolt-pagination-wrapper">
+                  <Link
+                    to={currentPage > 1 ? getPageUrl(currentPage - 1) : '#'}
+                    className={`bolt-pag-btn ${currentPage === 1 ? 'bolt-pag-disabled' : ''}`}
+                  >
+                    <ChevronLeft style={{ width: '16px', height: '16px' }} />
+                  </Link>
+
+                  {getPaginationPages().map((page, i) =>
+                    page === '...' ? (
+                      <span key={`ell-${i}`} className="bolt-pag-ellipsis">···</span>
+                    ) : (
+                      <Link
+                        key={page}
+                        to={getPageUrl(page)}
+                        className={`bolt-pag-btn ${page === currentPage ? 'bolt-pag-active' : ''}`}
+                      >
+                        {page}
+                      </Link>
+                    )
+                  )}
+
+                  <Link
+                    to={currentPage < totalPages ? getPageUrl(currentPage + 1) : '#'}
+                    className={`bolt-pag-btn ${currentPage === totalPages ? 'bolt-pag-disabled' : ''}`}
+                  >
+                    <ChevronRight style={{ width: '16px', height: '16px' }} />
+                  </Link>
+                </div>
+              )}
+            </>
 
           ) : (
             <div

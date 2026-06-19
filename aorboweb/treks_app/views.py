@@ -607,19 +607,21 @@ def api_search_suggestions(request):
 @api_view(['GET'])
 def api_travel_your_way(request):
     tag = request.GET.get('tag', '').strip()
+    page_number = request.GET.get('page', 1)
     if not tag:
         return Response({"results": [], "total_pages": 1})
  # ✅ Check cache first
-    cache_key = f"api_travel_your_way_{tag}"
+    cache_key = f"api_travel_your_way_{tag}_{page_number}"
     cached = cache.get(cache_key)
     if cached:
         return Response(cached)
     queryset = TrekList.objects.filter(
         tags__name__iexact=tag
     ).prefetch_related('images', 'tags').distinct()
-
+    paginator = Paginator(queryset, 12)               # ← added, 12 per page
+    page_obj = paginator.get_page(page_number)
     results = []
-    for item in queryset:
+    for item in page_obj:
         img_url = ""
         if hasattr(item, 'images') and item.images.exists():
             first_image = item.images.first()
@@ -644,9 +646,8 @@ def api_travel_your_way(request):
         })
 
     # 3. Save the serialized data to your cache for 10 minutes (matching your home template)
-    cache.set(cache_key, {"results": results, "total_pages": 1}, 60 * 10)
-
-    return Response({"results": results, "total_pages": 1})
+    cache.set(cache_key, {"results": results, "total_pages": paginator.num_pages}, 60 * 10)
+    return Response({"results": results, "total_pages": paginator.num_pages})
 @api_view(['GET'])
 def api_blogs_list(request):
     page_number = request.GET.get('page', 1)

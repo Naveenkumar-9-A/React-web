@@ -250,12 +250,12 @@ export default function Home() {
                             </div>
                           </div>
 
-                          {/* Custom Partner Footer Bar */}
+                          {/* Custom Partner Footer Bar*/}
                           <div className="bolt-card-footer">
-                            <div className="bolt-partner-badge">
+                            {/* <div className="bolt-partner-badge">
                               <ShieldCheck className="bolt-shield-icon" />
                               <span className="bolt-partner-text">Aorbo Certified Partner</span>
-                            </div>
+                            </div>  */}
                             <div className="bolt-arrow-circle">
                               <ArrowUpRight className="bolt-arrow-icon" />
                             </div>
