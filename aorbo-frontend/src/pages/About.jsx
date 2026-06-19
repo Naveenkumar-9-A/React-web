@@ -43,6 +43,7 @@ export default function About() {
       </div>
 
       {/* BACKSTORY CARD */}
+      <div className="about-grid">
       <div className="content-section">
         <h2>📜 Our Backstory</h2>
         <p className={!isExpanded['backstory'] ? 'truncated' : ''}>
@@ -71,7 +72,7 @@ export default function About() {
           {isExpanded['goal'] ? 'Read Less ▲' : 'Read More ▼'}
         </span>
       </div>
-
+</div>
       {/* MISSION SPLIT SECTION */}
       <div className="content-section">
         <div className="about-content mission-split-override">
@@ -98,6 +99,7 @@ export default function About() {
       </div>
 
       {/* DEDICATION CARD */}
+      <div className="about-grid">
       <div className="content-section">
         <h2>🤝 Our Dedication</h2>
         <p className={!isExpanded['dedication'] ? 'truncated' : ''}>
@@ -125,21 +127,25 @@ export default function About() {
           {isExpanded['agenda'] ? 'Read Less ▲' : 'Read More ▼'}
         </span>
       </div>
-
+</div>
       {/* WHY CHOOSE LIST */}
       <div className="content-section">
         <h2>⭐ Why Choose Aorbo Treks?</h2>
         <ul className="feature-list">
           <li>
+            <div className="feature-icon">🤝</div>
             <span><strong>Trusted Organizers:</strong> We partner with experienced and verified trekking experts to ensure your safety and satisfaction.</span>
           </li>
           <li>
+            <div className="feature-icon">🔍</div>
             <span><strong>Transparency:</strong> No hidden costs, no unpleasant surprises—just honest and straightforward service.</span>
           </li>
           <li>
+             <div className="feature-icon">👥</div>
             <span><strong>Community:</strong> Join a thriving community of trekkers and adventurers who share your passion for the outdoors.</span>
           </li>
           <li>
+            <div className="feature-icon">🧭</div>
             <span><strong>Tailored Experiences:</strong> Whether you're looking for a solo trek or a group adventure, we have options to suit every need.</span>
           </li>
         </ul>
