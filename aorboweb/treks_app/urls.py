@@ -26,6 +26,8 @@ urlpatterns = [
     # 🚀 ADD THE TWO ENDPOINTS FOR YOUR REACT HOME PAGE HERE:
     path('api/treks/', views.api_featured_treks, name='api_featured_treks'),
     path('api/treks/search/', views.api_search_suggestions, name='api_search_suggestions'),
+    path('api/treks/log-click/', views.api_log_trek_click, name='api_log_trek_click'),
+
 path('api/treks/<str:slug>/', views.api_trek_detail, name='api_trek_detail'),
 path('api/travel-your-way/', views.api_travel_your_way, name='api_travel_your_way'),
 path('api/blogs/', views.api_blogs_list, name='api_blogs_list'),

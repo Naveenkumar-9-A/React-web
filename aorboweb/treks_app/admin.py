@@ -15,7 +15,7 @@ from .models import (
     Contact, Blog, TrekCategory, TrekOrganizer, Trek, TrekImage,
     Testimonial, FAQ, SafetyTip, TeamMember, HomepageBanner,
     SocialMedia, ContactInfo, TrekList, Visitor, 
-    TermsAndConditions, Operator, Tag, TrekPoint 
+    TermsAndConditions, Operator, Tag, TrekPoint , SearchLog 
 )   
 
 # Register your models here.
@@ -372,3 +372,11 @@ class TrekPointAdmin(admin.ModelAdmin):
     list_display = ('name',)
     search_fields = ('name',)
 
+@admin.register(SearchLog)
+class SearchLogAdmin(admin.ModelAdmin):
+    list_display = ('query', 'tag', 'trek', 'ip_address', 'searched_at')
+    list_filter = ('tag', 'searched_at')
+    search_fields = ('query', 'tag')
+    readonly_fields = ('query', 'tag', 'trek', 'ip_address', 'searched_at')
+    ordering = ('-searched_at',)
+    date_hierarchy = 'searched_at'

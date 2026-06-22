@@ -317,3 +317,7 @@ SIMPLE_JWT = {
     'TOKEN_OBTAIN_PAIR_SERIALIZER': 'aorbo_project.serializers.MyTokenObtainPairSerializer',
 }
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [],
+    'DEFAULT_PERMISSION_CLASSES': [],
+}
