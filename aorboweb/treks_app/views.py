@@ -523,9 +523,9 @@ def api_featured_treks(request):
         if images:
             first = images[0]
             if first.image_url:
-                img_url = str(first.image_url)
-        if not img_url and item.image:
-            img_url = str(item.image)
+                img_url = str(first.image_url).rstrip('?')
+        if not img_url and item.image and 'example.com' not in str(item.image):
+            img_url = str(item.image).rstrip('?')
         operators_list = list(item.operators.values_list('name', flat=True))
         if not operators_list:
             operators_list = ["Aorbo Certified Partner"]
