@@ -1,8 +1,8 @@
-
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
 from django.urls import reverse
 from django.core.mail import EmailMultiAlternatives
@@ -11,6 +11,7 @@ from django.db.models import Q, Case, When, IntegerField
 from django.conf import settings
 from django.core.cache import cache
 from datetime import datetime
+import json
 import difflib
 import threading
 
@@ -140,14 +141,12 @@ def search_trek(request):
     return redirect("home")
 
 
-
 def search_suggestions(request):
     query = request.GET.get("q", "").strip()
 
     if len(query) < 2:
         return JsonResponse({"results": []})
 
-    # Cache search suggestions for 30 minutes
     query_n = normalize_text(query)
     cache_key = f"search_suggestions_{query_n}"
 
@@ -213,20 +212,18 @@ def search_suggestions(request):
     return JsonResponse(response_data)
 
 def about(request):
-    """Render about page with cached team members."""
     cache_key = "about_page_team_members"
     team_members = cache.get(cache_key)
     
     if not team_members:
         team_members = TeamMember.objects.all().order_by('order')
-        cache.set(cache_key, team_members, 60 * 60)  # 1 hour
+        cache.set(cache_key, team_members, 60 * 60)
     
     return render(request, 'about.html', {
         'team_members': team_members
     })
 
 def blogs(request):
-    """Render blogs page with pagination and caching."""
     page_number = request.GET.get('page', 1)
     cache_key = f"blogs_page_{page_number}"
     cached_page = cache.get(cache_key)
@@ -285,7 +282,6 @@ def treks(request):
     return render(request, 'treks.html', context)
 
 def trek_detail(request, slug):
-    """Display detailed view of a trek with caching."""
     cache_key = f"trek_detail_{slug}"
     cached_data = cache.get(cache_key)
     
@@ -299,17 +295,16 @@ def trek_detail(request, slug):
         'similar_treks': Trek.objects.filter(category=trek.category).exclude(id=trek.id)[:3],
     }
     
-    cache.set(cache_key, context, 60 * 60)  # 1 hour
+    cache.set(cache_key, context, 60 * 60)
     return render(request, 'trek_detail.html', context)
 
 def safety(request):
-    """Render safety page with cached safety tips."""
     cache_key = "safety_page_tips"
     safety_tips = cache.get(cache_key)
     
     if not safety_tips:
         safety_tips = SafetyTip.objects.all().order_by('order')
-        cache.set(cache_key, safety_tips, 60 * 60)  # 1 hour
+        cache.set(cache_key, safety_tips, 60 * 60)
     
     return render(request, 'safety.html', {
         'safety_tips': safety_tips
@@ -320,45 +315,62 @@ def detect_trek_category(message: str):
 
     if any(word in message for word in ["adventure", "hills", "mountain", "climb"]):
         return "adventure"
-
     if any(word in message for word in ["camp", "camping", "tent", "bonfire"]):
         return "camping"
-
     if any(word in message for word in ["nature", "green", "greenery", "forest", "waterfall"]):
         return "nature"
-
     if any(word in message for word in ["beach", "sea", "coast"]):
         return "beach"
-
     if any(word in message for word in ["spiritual", "temple", "holy", "pilgrimage"]):
         return "spiritual"
-
     if any(word in message for word in ["weekend", "short trip", "getaway"]):
         return "weekend"
-
     return None
 
+
+@csrf_exempt  # ← React sends JSON, no CSRF cookie needed for this public endpoint
 def contact(request):
 
     if request.method == "GET":
         return render(request, "contact.html")
-    
-    name = request.POST.get("name")
-    email = request.POST.get("email")
-    mobile = request.POST.get("mobile")
-    user_type = request.POST.get("user_type")   # trekker / organizer / other
-    message = request.POST.get("comment")
-    trek_category = request.POST.get("trek_category")  # Category selected in dropdown
 
-    # Validate all required fields
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        data = request.POST
+
+    name = data.get("name")
+    email = data.get("email")
+    mobile = data.get("mobile")
+    user_type = data.get("user_type")
+    message = data.get("comment")
+    trek_category = data.get("trek_category")
+
     if not all([name, email, mobile, user_type, message]):
         return JsonResponse({"error": "Please fill all required fields"}, status=400)
 
-    # Save to database
-    Contact.objects.create(
+    # Save to Django DB
+    contact_obj = Contact.objects.create(
         name=name, email=email, mobile=mobile,
-        user_type=user_type, comment=message
+        user_type=user_type,
+        trek_category=trek_category or None,
+        comment=message
     )
+
+    # Sync to Supabase
+    try:
+        from .supabase_client import supabase
+        supabase.table('contact_submissions').insert({
+            'name': contact_obj.name,
+            'email': contact_obj.email,
+            'mobile': contact_obj.mobile,
+            'user_type': contact_obj.user_type,
+            'trek_category': contact_obj.trek_category,
+            'comment': contact_obj.comment,
+            'submitted_at': contact_obj.created_at.isoformat(),
+        }).execute()
+    except Exception as e:
+        print(f"Supabase sync failed: {e}")
 
     TREK_LINKS = {
         "adventure": "https://www.aorbotreks.com/travel-your-way/?tag=adventure",
@@ -368,6 +380,7 @@ def contact(request):
         "spiritual": "https://www.aorbotreks.com/travel-your-way/?tag=spiritual",
         "weekend": "https://www.aorbotreks.com/travel-your-way/?tag=weekend",
     }
+
     detected_category = None
     explore_link = "https://www.aorbotreks.com"
     subject = "We've Received Your Query – Aorbo Treks"
@@ -379,10 +392,7 @@ def contact(request):
         else:
             detected_category = detect_trek_category(message)
         
-        explore_link = TREK_LINKS.get(
-            detected_category,
-            "https://www.aorbotreks.com/treks"
-        )
+        explore_link = TREK_LINKS.get(detected_category, "https://www.aorbotreks.com/treks")
         subject = f"{detected_category.title() if detected_category else 'Explore'} Treks – Aorbo Treks"
         template_name = "emails/trekker.html"
 
@@ -397,7 +407,7 @@ def contact(request):
         template_name = "emails/other.html"
 
     display_category = detected_category.title() if detected_category else "Our Featured"
-    
+
     context = {
         "name": name,
         "email": email,
@@ -418,15 +428,14 @@ def contact(request):
             to=[email],
         )
         mail.attach_alternative(html_content, "text/html")
-        # mail.send()
         send_email_async(mail)
     except Exception as e:
         return JsonResponse({"error": f"Failed to send email: {str(e)}"}, status=500)
 
     return JsonResponse({"message": "Message sent successfully"})
 
+
 def travel_your_way(request):
-    """Display treks filtered by selected tag."""
     selected_tag = request.GET.get("tag")
     if not selected_tag:
         return redirect("home")
@@ -439,10 +448,8 @@ def travel_your_way(request):
 
 
 def card_trek_detail(request, slug):
-    """Display detailed view of a trek with related treks."""
     trek = get_object_or_404(TrekList, id=slug)
     related_treks = trek.related_treks.all() if hasattr(trek, "related_treks") else TrekList.objects.none()
-    
     activities_list = [a.strip() for a in trek.activities.split(",")] if trek.activities else []
 
     return render(request, "card_details.html", {
@@ -464,10 +471,6 @@ def user_agreement(request):
 
 @api_view(['GET'])
 def api_featured_treks(request):
-    """
-    Optimized JSON endpoint using Django's core memory caching layer
-    to deliver instant performance to your React frontend.
-    """
     selected_tag = request.GET.get('tag', '').strip()
     search_query = request.GET.get('q', '').strip()
     page_number = request.GET.get('page', 1)
@@ -513,7 +516,7 @@ def api_featured_treks(request):
 
         results.append({
             "id": item.id,
-            "slug": item.slug if hasattr(item, 'slug') and item.slug else str(item.id), # 🚀 ADDED: Passes the true slug text to React
+            "slug": item.slug if hasattr(item, 'slug') and item.slug else str(item.id),
             "name": item.name,
             "state": item.state,
             "price_start": item.price_start if hasattr(item, 'price_start') else "N/A",
@@ -541,18 +544,13 @@ def api_trek_detail(request, slug):
     except TrekList.DoesNotExist:
         return Response({"error": "Trek not found"}, status=404)
 
-    # ✅ operators is ManyToManyField to Operator model
     operators_list = list(trek_item.operators.values_list('name', flat=True))
     if not operators_list:
         operators_list = ["Aorbo Certified Partner"]
 
-    # ✅ trek_points is ManyToManyField to TrekPoint model (famous places)
     places_list = list(trek_item.trek_points.values_list('name', flat=True))
-
-    # activities from TextField
     activities_list = [a.strip() for a in trek_item.activities.split(",")] if trek_item.activities else []
 
-    # related treks
     related_treks = []
     for rel in trek_item.related_treks.all():
         related_treks.append({
@@ -562,7 +560,6 @@ def api_trek_detail(request, slug):
             "state": rel.state
         })
 
-    # image
     img_url = ""
     if trek_item.images.exists():
         first_image = trek_item.images.first()
@@ -583,16 +580,14 @@ def api_trek_detail(request, slug):
         "operators": operators_list,
         "related_treks": related_treks
     })
+
+
 @api_view(['GET'])
 def api_search_suggestions(request):
-    """
-    Feeds instant drop-down query matches to the React hero search bar wrapper.
-    """
     query = request.GET.get("q", "").strip().lower()
     if len(query) < 2:
         return Response([])
 
-    # Query matching against TrekList records 
     treks = TrekList.objects.filter(name__icontains=query).only("id", "name", "state")[:8]
     
     results = []
@@ -604,16 +599,18 @@ def api_search_suggestions(request):
         })
     return Response(results)
 
+
 @api_view(['GET'])
 def api_travel_your_way(request):
     tag = request.GET.get('tag', '').strip()
     if not tag:
         return Response({"results": [], "total_pages": 1})
- # ✅ Check cache first
+
     cache_key = f"api_travel_your_way_{tag}"
     cached = cache.get(cache_key)
     if cached:
         return Response(cached)
+
     queryset = TrekList.objects.filter(
         tags__name__iexact=tag
     ).prefetch_related('images', 'tags').distinct()
@@ -643,10 +640,10 @@ def api_travel_your_way(request):
             "operators": operators_list
         })
 
-    # 3. Save the serialized data to your cache for 10 minutes (matching your home template)
     cache.set(cache_key, {"results": results, "total_pages": 1}, 60 * 10)
-
     return Response({"results": results, "total_pages": 1})
+
+
 @api_view(['GET'])
 def api_blogs_list(request):
     page_number = request.GET.get('page', 1)
