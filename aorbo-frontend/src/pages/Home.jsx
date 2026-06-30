@@ -231,7 +231,15 @@ const handleTagClick = (tag) => {
                     key={trek.id}
                     className={`col-12 col-sm-6 col-md-4 col-lg-3 ${index >= 8 ? 'extra-trek-card d-none' : ''}`}
                   >
-                    <Link to={`/treks/${trek.id}`} className="text-decoration-none d-block h-100">
+                    <Link to={`/treks/${trek.id}`}  className="text-decoration-none d-block h-100"
+                    onClick={() => {
+                         fetch(`${BACKEND_URL}/api/treks/log-click/`, {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ trek_id: trek.id, query: '', tag: selectedTag || '' })
+                    });
+                    }}
+                  >
                       <div className="bolt-premium-card">
                         
                         {/* Glow and Shimmer Lines */}
