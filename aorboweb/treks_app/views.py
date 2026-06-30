@@ -10,7 +10,8 @@ from django.template.loader import render_to_string
 from django.db.models import Q, Case, When, IntegerField
 from django.conf import settings
 from django.core.cache import cache
-from datetime import datetime
+from django.utils import timezone as dj_timezone
+from datetime import datetime, timezone, timedelta
 import difflib
 import threading
 
@@ -644,6 +645,23 @@ def api_log_trek_click(request):
         ip_address=request.META.get('REMOTE_ADDR')
     )
     return Response({"status": "logged"})
+@api_view(['GET'])
+def api_analytics(request):
+    period = request.GET.get('period', '30days')
+    qs = SearchLog.objects.all()
+    now = dj_timezone.now()
+
+    if period == 'today':
+        qs = qs.filter(searched_at__date=now.date())
+    elif period == '7days':
+        qs = qs.filter(searched_at__gte=now - timedelta(days=7))
+    elif period == '30days':
+        qs = qs.filter(searched_at__gte=now - timedelta(days=30))
+    elif period == 'year':
+        qs = qs.filter(searched_at__year=now.year)
+
+    return Response({'total_searches': qs.count()})
+
 @api_view(['GET'])
 def api_travel_your_way(request):
     tag = request.GET.get('tag', '').strip()
