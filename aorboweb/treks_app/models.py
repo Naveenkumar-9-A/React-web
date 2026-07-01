@@ -433,6 +433,9 @@ class TrekImage(models.Model):
             elif ext == "png":
                 img.save(img_io, format="PNG", optimize=True)
                 mime = "image/png"
+            elif ext == "webp":
+                img.save(img_io, format="WEBP", quality=80)
+                mime = "image/webp"
             else:
                 img.save(img_io, format=img.format)
                 mime = mimetypes.guess_type(self.image.name)[0] or "application/octet-stream"
