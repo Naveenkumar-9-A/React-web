@@ -12,25 +12,24 @@ const TAG_META = {
   camping:   { icon: '🏕️', label: 'Camping & Bonfire',  subtitle: 'Experience starlit nights and warm bonfires in the wild.' },
 };
 
-// ── Module-level cache: survives re-renders & tag switches within a session ──
+// Cache keyed by "tag__page" e.g. "adventure__1"
 const trekCache = {};
-
-// ── Tracks tags currently being fetched so we never fire two requests for the same tag ──
 const inFlight = new Set();
-
-// 8 skeleton placeholder slots while fetching
 const SKELETON_COUNT = 8;
 const ITEMS_PER_PAGE = 8;
 
 export default function TravelYourWay() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [treks, setTreks]     = useState([]);
+  const [treks, setTreks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const abortRef = useRef(null);
 
-  const selectedTag  = (searchParams.get('tag') || 'adventure').toLowerCase();
+  const selectedTag  = (searchParams.get('tag')  || 'adventure').toLowerCase();
   const BACKEND_URL  = 'http://127.0.0.1:8000';
+
+  const cacheKey = `${selectedTag}__${currentPage}`;
 
   const meta = TAG_META[selectedTag] || {
     icon: '🗺️',
@@ -38,43 +37,49 @@ export default function TravelYourWay() {
     subtitle: 'Showing treks and trips that match your travel style.',
   };
 
+
   // Reset to page 1 when tag changes
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedTag]);
 
+
+  // ── Main fetch ──
+
   useEffect(() => {
-    // Hit cache → instant render, no network
-    if (trekCache[selectedTag]) {
-      setTreks(trekCache[selectedTag]);
+    if (trekCache[cacheKey]) {
+      setTreks(trekCache[cacheKey].results);
+      setTotalPages(trekCache[cacheKey].totalPages);
       setLoading(false);
       return;
     }
 
-    // Already fetching this tag (React 18 Strict Mode double-invoke guard)
-    if (inFlight.has(selectedTag)) return;
+    if (inFlight.has(cacheKey)) return;
 
-    // Cancel previous tag's in-flight request
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
-    inFlight.add(selectedTag);
+    inFlight.add(cacheKey);
     setLoading(true);
 
-    fetch(`${BACKEND_URL}/api/travel-your-way/?tag=${selectedTag}`, {
+    fetch(`${BACKEND_URL}/api/travel-your-way/?tag=${selectedTag}&page=${currentPage}`, {
       signal: controller.signal,
     })
       .then((r) => r.json())
       .then((data) => {
-        const results = data.results || [];
-        trekCache[selectedTag] = results;
-        inFlight.delete(selectedTag);
+        const results    = data.results    || [];
+        const totalPages = data.total_pages || 1;
+        trekCache[cacheKey] = { results, totalPages };
+        inFlight.delete(cacheKey);
         setTreks(results);
+        setTotalPages(totalPages);
         setLoading(false);
+        // Scroll to top of grid on page change
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       })
       .catch((err) => {
-        inFlight.delete(selectedTag);
+        inFlight.delete(cacheKey);
         if (err.name !== 'AbortError') {
           console.error('Failed to resolve custom category items:', err);
           setLoading(false);
@@ -83,41 +88,37 @@ export default function TravelYourWay() {
 
     return () => {
       controller.abort();
-      inFlight.delete(selectedTag);
+      inFlight.delete(cacheKey);
     };
-  }, [selectedTag]);
+  }, [cacheKey]);
 
-  // Prefetch all other tags silently after current tag loads
-  // No `loading` in deps — runs once per selectedTag change after render
+  // ── Prefetch next page in background ──
   useEffect(() => {
-    const tags = Object.keys(TAG_META).filter(
-      (t) => t !== selectedTag && !trekCache[t] && !inFlight.has(t)
-    );
-    if (tags.length === 0) return;
+    if (loading || currentPage >= totalPages) return;
+    const nextKey = `${selectedTag}__${currentPage + 1}`;
+    if (trekCache[nextKey] || inFlight.has(nextKey)) return;
 
-    // Stagger prefetches so they don't all hit Django at once
-    const timers = tags.map((tag, i) =>
-      setTimeout(() => {
-        if (trekCache[tag] || inFlight.has(tag)) return;
-        inFlight.add(tag);
-        fetch(`${BACKEND_URL}/api/travel-your-way/?tag=${tag}`)
-          .then((r) => r.json())
-          .then((data) => {
-            trekCache[tag] = data.results || [];
-            inFlight.delete(tag);
-          })
-          .catch(() => inFlight.delete(tag));
-      }, (i + 1) * 600)   // 600ms gap between each prefetch
-    );
+    const timer = setTimeout(() => {
+      if (trekCache[nextKey] || inFlight.has(nextKey)) return;
+      inFlight.add(nextKey);
+      fetch(`${BACKEND_URL}/api/travel-your-way/?tag=${selectedTag}&page=${currentPage + 1}`)
+        .then((r) => r.json())
+        .then((data) => {
+          trekCache[nextKey] = { results: data.results || [], totalPages: data.total_pages || 1 };
+          inFlight.delete(nextKey);
+        })
+        .catch(() => inFlight.delete(nextKey));
+    }, 800);
 
-    return () => timers.forEach(clearTimeout);
-  }, [selectedTag]);
+    return () => clearTimeout(timer);
+  }, [loading, selectedTag, currentPage, totalPages]);
 
-  // Pagination logic
-  const totalPages = Math.ceil(treks.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginatedTreks = treks.slice(startIndex, endIndex);
+  // ── Pagination helpers ──
+  const getPageUrl = (page) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('page', page);
+    return `?${params.toString()}`;
+  };
 
   const getPaginationPages = () => {
     if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -125,6 +126,20 @@ export default function TravelYourWay() {
     if (currentPage >= totalPages - 2) return [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
     return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
   };
+  const handleTrekClick = (trek) => {
+    fetch(`${BACKEND_URL}/api/treks/log-click/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            trek_id: trek.id, 
+            query: '',
+            tag: selectedTag
+        })
+    });
+  };
+
+  // Pagination logic
+
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
@@ -149,7 +164,7 @@ export default function TravelYourWay() {
             {Object.entries(TAG_META).map(([tag, info]) => (
               <Link
                 key={tag}
-                to={`/travel-your-way?tag=${tag}`}
+                to={`/travel-your-way?tag=${tag}&page=1`}
                 className={`tyw-tag-pill ${selectedTag === tag ? 'tyw-tag-pill--active' : ''}`}
               >
                 {info.icon} {info.label}
@@ -164,7 +179,6 @@ export default function TravelYourWay() {
         <div className="container">
 
           {loading ? (
-            /* ── SKELETON GRID ── */
             <div className="row g-4">
               {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
                 <div key={i} className="col-12 col-sm-6 col-md-4 col-lg-3">
@@ -184,6 +198,7 @@ export default function TravelYourWay() {
             </div>
 
           ) : treks.length > 0 ? (
+
             /* ── REAL CARDS ── */
             <>
               <div className="row g-4">
@@ -197,7 +212,11 @@ export default function TravelYourWay() {
 
                   return (
                     <div key={trek.id} className="col-12 col-sm-6 col-md-4 col-lg-3">
-                      <Link to={`/treks/${trek.id}`} className="text-decoration-none d-block h-100">
+                        <Link
+                            to={`/treks/${trek.id}`}
+                            onClick={() => handleTrekClick(trek)}
+                            className="text-decoration-none d-block h-100"
+                        >
                         <div className="bolt-premium-card">
                           <div className="bolt-shine" />
                           <div className="bolt-top-glow" />
@@ -255,38 +274,41 @@ export default function TravelYourWay() {
                 })}
               </div>
 
+
               {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className="bolt-pagination-wrapper" style={{ marginTop: '3rem' }}>
-                  <button
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className={`bolt-pag-btn ${currentPage === 1 ? 'bolt-pag-disabled' : ''}`}
-                  >
-                    <ChevronLeft style={{ width: '16px', height: '16px' }} />
-                  </button>
+{totalPages > 1 && (
+  <div className="bolt-pagination-wrapper" style={{ marginTop: '3rem' }}>
+    <button
+      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+      disabled={currentPage === 1}
+      className={`bolt-pag-btn ${currentPage === 1 ? 'bolt-pag-disabled' : ''}`}
+    >
+      <ChevronLeft style={{ width: '16px', height: '16px' }} />
+    </button>
 
-                  {getPaginationPages().map((page, i) =>
-                    page === '...' ? (
-                      <span key={`ell-${i}`} className="bolt-pag-ellipsis">···</span>
-                    ) : (
-                      <button
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        className={`bolt-pag-btn ${page === currentPage ? 'bolt-pag-active' : ''}`}
-                      >
-                        {page}
-                      </button>
-                    )
-                  )}
+                  {getPaginationPages().map((page, index) =>
+  page === '...' ? (
+    <span key={`ellipsis-${index}`} className="bolt-pag-ellipsis">
+      ...
+    </span>
+  ) : (
+    <button
+      key={page}
+      onClick={() => setCurrentPage(page)}
+      className={`bolt-pag-btn ${page === currentPage ? 'bolt-pag-active' : ''}`}
+    >
+      {page}
+    </button>
+  )
+)}
 
-                  <button
-                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
-                    className={`bolt-pag-btn ${currentPage === totalPages ? 'bolt-pag-disabled' : ''}`}
-                  >
-                    <ChevronRight style={{ width: '16px', height: '16px' }} />
-                  </button>
+<button
+  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+  disabled={currentPage === totalPages}
+  className={`bolt-pag-btn ${currentPage === totalPages ? 'bolt-pag-disabled' : ''}`}
+>
+  <ChevronRight style={{ width: '16px', height: '16px' }} />
+</button>
                 </div>
               )}
             </>

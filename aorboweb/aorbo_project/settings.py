@@ -173,7 +173,7 @@ EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 USE_I18N = True
 USE_TZ = True
 
@@ -238,6 +238,7 @@ CONTENT_SECURITY_POLICY = {
             'https://www.gstatic.com',
             'https://www.google-analytics.com',  # Google Analytics data collection
             'https://cdn.jsdelivr.net', 
+            'https://cdnjs.cloudflare.com',
             'http://localhost:5173',    
             'http://127.0.0.1:5173',
         ),
@@ -246,6 +247,7 @@ CONTENT_SECURITY_POLICY = {
             'https://fonts.googleapis.com',
             'https://fonts.gstatic.com',
             'https://cdn.jsdelivr.net',
+            'https://cdnjs.cloudflare.com',
             'https://aorbotreks.com',
             'https://www.aorbotreks.com',
             'http://localhost:5173',    
@@ -319,3 +321,7 @@ SIMPLE_JWT = {
     'TOKEN_OBTAIN_PAIR_SERIALIZER': 'aorbo_project.serializers.MyTokenObtainPairSerializer',
 }
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [],
+    'DEFAULT_PERMISSION_CLASSES': [],
+}

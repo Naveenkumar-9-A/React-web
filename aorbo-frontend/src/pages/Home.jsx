@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { MapPin, Clock, Calendar, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import TrekMap from '../components/TrekMap';
@@ -25,18 +27,18 @@ export default function Home() {
   // Define BACKEND_URL first!
   const BACKEND_URL = 'http://127.0.0.1:8000';
 
-  // 🗺️ ENHANCED: Use combined search (trek database + OpenStreetMap)
-  const { 
-    filteredTreks, 
-    osmResults, 
-    highlightedTrekId, 
-    isLoading,
-    loadingMessage,
-    errorMessage,
-    handleSearch, 
-    handleMapMarkerClick, 
-    clearSearch 
-  } = useEnhancedSearch(allTreksForSearch, BACKEND_URL); // 🔍 Search against ALL treks with backend URL for AI enrichment
+const {
+  filteredTreks,
+  osmResults,
+  highlightedTrekId,
+  isLoading,
+  loadingMessage,
+  errorMessage,
+  handleSearch,
+  handleMapMarkerClick,
+  clearSearch,
+} = useEnhancedSearch(allTreksForSearch, BACKEND_URL); // 🔍 Search against ALL treks with backend URL for AI enrichment
+
 
   useEffect(() => {
     const tag = searchParams.get('tag') || '';
@@ -63,119 +65,165 @@ export default function Home() {
     }
   };
 
-  // 🔍 Fetch ALL treks for search (no pagination) - called once on mount
-  const fetchAllTreksForSearch = async () => {
-    try {
-      // Fetch multiple pages to get all treks for search
-      const allTreks = [];
-      let page = 1;
-      let hasMore = true;
+// 🔍 Fetch ALL treks for search (no pagination) - called once on mount
+const fetchAllTreksForSearch = async () => {
+  try {
+    const allTreks = [];
+    let page = 1;
+    let hasMore = true;
 
-      while (hasMore && page <= 10) { // Safety limit to prevent infinite loops
-        const res = await fetch(`${BACKEND_URL}/api/treks/?page=${page}`);
-        const data = await res.json();
-        
-        if (data.results && data.results.length > 0) {
-          allTreks.push(...data.results);
-          page++;
-          hasMore = page <= (data.total_pages || 1);
-        } else {
-          hasMore = false;
-        }
+    while (hasMore && page <= 10) {
+      const res = await fetch(`${BACKEND_URL}/api/treks/?page=${page}`);
+      const data = await res.json();
+
+      if (data.results && data.results.length > 0) {
+        allTreks.push(...data.results);
+        page++;
+        hasMore = page <= (data.total_pages || 1);
+      } else {
+        hasMore = false;
       }
-
-      setAllTreksForSearch(allTreks);
-      console.log(`✅ Loaded ${allTreks.length} treks for search functionality`);
-    } catch (err) {
-      console.error('Failed to fetch all treks for search', err);
-    }
-  };
-
-  const handleSearchInput = async (e) => {
-    const val = e.target.value;
-    setSearchQuery(val);
-
-    // Show map when typing 2+ characters
-    if (val.length >= 2) {
-      setShowHeroMap(true);
-      // ✅ SINGLE SEARCH CONTROLLER: Call useEnhancedSearch hook ONLY
-      // This handles: debounce, trek database search, OSM search, caching, AbortController
-      handleSearch(val);
     }
 
-    if (val.length < 2) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      setShowHeroMap(false);
-      clearSearch();
-      return;
-    }
+    setAllTreksForSearch(allTreks);
+    console.log(`✅ Loaded ${allTreks.length} treks for search functionality`);
+  } catch (err) {
+    console.error('Failed to fetch all treks for search', err);
+  }
+};
 
-    // Get suggestions for dropdown (from trek database via backend)
+const debounceRef = useRef(null);
+
+const handleSearchInput = (e) => {
+  const val = e.target.value;
+  setSearchQuery(val);
+
+  // Show map when typing
+  if (val.length >= 2) {
+    setShowHeroMap(true);
+    handleSearch(val);
+  }
+
+  if (val.length < 2) {
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setShowHeroMap(false);
+    clearSearch();
+    clearTimeout(debounceRef.current);
+    return;
+  }
+
+  clearTimeout(debounceRef.current);
+
+  // Wait 500ms before requesting suggestions
+  debounceRef.current = setTimeout(async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/treks/search/?q=${val}`);
       const data = await res.json();
-      
-      // DEFENSIVE: Ensure trekSuggestions is always an array
+
       const trekSuggestions = Array.isArray(data) ? data : [];
-      
-      // DEFENSIVE: Use only trek suggestions (no direct OSM call)
-      // OSM results come through the main search in filteredTreks and osmResults
-      const safeTreks = Array.isArray(trekSuggestions) ? trekSuggestions : [];
-      setSuggestions(safeTreks.slice(0, 8));
+
+      setSuggestions(trekSuggestions.slice(0, 8));
       setShowSuggestions(true);
     } catch (err) {
       console.error('Search error:', err);
-      // DEFENSIVE: On any error, show empty suggestions but don't crash
       setSuggestions([]);
     }
-  };
+  }, 500);
+};
 
-  const handleSearchSubmit = (e) => {
+ const handleSearchSubmit = (e) => {
     e.preventDefault();
-    navigate(`/travel-your-way?q=${searchQuery}`);
-  };
 
-  const handleSuggestionClick = (suggestion) => {
-    // Check if it's a trek result or OSM result
-    if (suggestion.type === 'osm') {
-      // Generate URL-safe slug (for URL consistency)
-      const slug = generateSlug(suggestion.name);
-      // Navigate to CardDetails with OSM data passed via state
-      navigate(`/destination/${slug}`, { 
-        state: { 
-          source: 'osm',
-          destination: suggestion 
-        } 
-      });
-    } else {
-      // Navigate to trek details page with database trek
-      navigate(`/treks/${suggestion.id}`);
-    }
-    setShowSuggestions(false);
-    setSearchQuery('');
-  };
+    if (!searchQuery.trim()) return;
 
-  // Handle map marker click - navigate appropriately based on type
-  const handleMapMarkerClickWithNav = (trek) => {
-    handleMapMarkerClick(trek);
-    
-    if (trek.id) {
-      if (trek.id.startsWith('osm-')) {
-        // OSM result - navigate to CardDetails with state
-        const slug = generateSlug(trek.name);
-        navigate(`/destination/${slug}`, {
-          state: {
-            source: 'osm',
-            destination: trek
-          }
-        });
-      } else {
-        // Trek result - navigate to trek details
-        navigate(`/treks/${trek.id}`);
-      }
+    if (suggestions.length > 0) {
+        const first = suggestions[0];
+
+        fetch(`${BACKEND_URL}/api/treks/log-click/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                trek_id: first.id,
+                query: searchQuery,
+            }),
+        }).catch(() => {});
+
+        navigate(`/treks/${first.id}`);
+        setShowSuggestions(false);
+        return;
     }
-  };
+
+    navigate(`/travel-your-way?q=${encodeURIComponent(searchQuery)}`);
+};
+
+const handleSuggestionClick = (suggestion) => {
+  // ✅ Log click (only if backend is available)
+  fetch(`${BACKEND_URL}/api/treks/log-click/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      trek_id: suggestion.id || null,
+      query: searchQuery,
+      source: suggestion.type === 'osm' ? 'osm' : 'database',
+    }),
+  }).catch((err) => console.log("Click log failed:", err));
+
+  // ✅ Navigate based on suggestion type
+  if (suggestion.type === 'osm') {
+    const slug = generateSlug(suggestion.name);
+
+    navigate(`/destination/${slug}`, {
+      state: {
+        source: 'osm',
+        destination: suggestion,
+      },
+    });
+  } else {
+    navigate(`/treks/${suggestion.id}`);
+  }
+
+  setShowSuggestions(false);
+  setSearchQuery('');
+};
+
+// ✅ Handle tag click (from main branch)
+const handleTagClick = (tag) => {
+  fetch(`${BACKEND_URL}/api/treks/log-click/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query: '',
+      tag: tag,
+    }),
+  }).catch((err) => console.log("Tag log failed:", err));
+};
+
+// ✅ Handle map marker click
+const handleMapMarkerClickWithNav = (trek) => {
+  handleMapMarkerClick(trek);
+
+  if (!trek.id) return;
+
+  if (String(trek.id).startsWith('osm-')) {
+    const slug = generateSlug(trek.name);
+
+    navigate(`/destination/${slug}`, {
+      state: {
+        source: 'osm',
+        destination: trek,
+      },
+    });
+  } else {
+    navigate(`/treks/${trek.id}`);
+  }
+};
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -202,6 +250,17 @@ export default function Home() {
 
   return (
     <>
+      {/* ANIMATION STYLES */}
+      <style>{`
+        @keyframes floatPrice {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
+        .animated-price-pill { animation: floatPrice 3s ease-in-out infinite; }
+        .interactive-trek-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0,0,0,.12); }
+        .interactive-trek-card:hover img { transform: scale(1.08); }
+      `}</style>
+
       {/* ============ 1. HERO SECTION WITH FULL-SCREEN CAROUSEL ============ */}
       <section className="hero-landing p-0">
         <div id="heroCarousel" className="carousel slide hero-carousel" data-bs-ride="carousel" data-bs-interval="4000">
@@ -234,15 +293,12 @@ export default function Home() {
               Search for your next trek or destination and start planning an unforgettable experience.
             </p>
 
-            <form className="hero-search-form" onSubmit={(e) => {
-              e.preventDefault();
-              if (suggestions.length > 0) {
-                handleSuggestionClick(suggestions[0]);
-              } else if (searchQuery.length > 0) {
-                // If no suggestions but search query exists, try OpenStreetMap search
-                navigate(`/travel-your-way?q=${searchQuery}`);
-              }
-            }}>
+
+            <form
+              className="hero-search-form"
+              onSubmit={handleSearchSubmit}
+            >
+
               <div className="hero-search-wrapper" ref={suggestionRef}>
                 <input
                   type="text"
@@ -254,12 +310,12 @@ export default function Home() {
                   value={searchQuery}
                   onChange={handleSearchInput}
                 />
+
                 <button type="submit" className="hero-search-button" aria-label="Search">
                   <svg xmlns="http://www.w3.org/2000/svg" className="hero-search-icon" viewBox="0 0 24 24">
                     <path d="M10 4a6 6 0 0 1 4.8 9.6l3.8 3.8a1 1 0 0 1-1.4 1.4l-3.8-3.8A6 6 0 1 1 10 4zm0 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />
                   </svg>
                 </button>
-
                 {showSuggestions && suggestions.length > 0 && (
                   <div id="search-suggestions" className="search-suggestions" style={{ display: 'block' }}>
                     {suggestions.map((suggestion) => (
@@ -413,7 +469,9 @@ export default function Home() {
             {featuredTreks && featuredTreks.length > 0 ? (
               featuredTreks.map((trek, index) => {
                 const resolvedImageUrl = trek.images && trek.images[0] && trek.images[0].image_url
-                  ? trek.images[0].image_url.startsWith('http') ? trek.images[0].image_url : `${BACKEND_URL}${trek.images[0].image_url}`
+                  ? trek.images[0].image_url.startsWith('http')
+                    ? trek.images[0].image_url
+                    : `${BACKEND_URL}${trek.images[0].image_url}`
                   : '/images/placeholder-trek.jpg';
 
                 return (
@@ -421,7 +479,15 @@ export default function Home() {
                     key={trek.id}
                     className="col-12 col-sm-6 col-md-4 col-lg-3"
                   >
-                    <Link to={`/treks/${trek.id}`} className="text-decoration-none d-block h-100">
+                    <Link to={`/treks/${trek.id}`}  className="text-decoration-none d-block h-100"
+                    onClick={() => {
+                         fetch(`${BACKEND_URL}/api/treks/log-click/`, {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ trek_id: trek.id, query: '', tag: selectedTag || '' })
+                    });
+                    }}
+                  >
                       <div className="bolt-premium-card">
                         
                         {/* Glow and Shimmer Lines */}
@@ -478,8 +544,9 @@ export default function Home() {
                             </div>
                           </div>
 
-                          {/* Custom Partner Footer Bar */}
+                          {/* Custom Partner Footer Bar*/}
                           <div className="bolt-card-footer">
+
                             <div className="bolt-arrow-circle">
                               <ArrowUpRight className="bolt-arrow-icon" />
                             </div>
@@ -540,7 +607,6 @@ export default function Home() {
           <p className="tyw-subtitle mb-4">
             Whether you seek adventure, peace, or a quick weekend escape, find the journey that fits your style.
           </p>
-
           <div className="row g-4 justify-content-center mt-3">
             {[
               { tag: 'adventure', icon: '⛰️', title: 'Adventure Treks', text: 'For thrill-seekers and explorers who crave a challenge.', iconClass: 'icon-adventure' },
@@ -551,7 +617,7 @@ export default function Home() {
               { tag: 'camping', icon: '🏕️', title: 'Camping & Bonfire', text: 'Experience starlit nights and warm bonfires in the wild.', iconClass: 'icon-camping' },
             ].map(({ tag, icon, title, text, iconClass }) => (
               <div key={tag} className="col-12 col-md-6 col-lg-4 d-flex">
-                <Link to={`/travel-your-way?tag=${tag}`} className="tyw-card-link w-100">
+                <Link to={`/travel-your-way?tag=${tag}`} className="tyw-card-link w-100" onClick={() => handleTagClick(tag)}>
                   <div className="tyw-card">
                     <div className={`tyw-icon ${iconClass}`}>{icon}</div>
                     <h3 className="tyw-card-title">{title}</h3>
@@ -571,7 +637,6 @@ export default function Home() {
           <p className="why-subtitle mb-5">
             We're more than a platform; we are your trusted partner in adventure, committed to making every journey safe, seamless, and unforgettable.
           </p>
-
           <div className="row g-4 justify-content-center">
             {[
               { icon: '🎯', title: 'Tailored Experience', text: 'Customize your trek according to your preferences and comfort level.' },
