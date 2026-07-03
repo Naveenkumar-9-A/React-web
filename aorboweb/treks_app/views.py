@@ -13,6 +13,9 @@ from django.core.cache import cache
 from datetime import datetime
 import difflib
 import threading
+import logging
+
+logger = logging.getLogger(__name__)
 
 from .models import (
     Contact, Blog, TrekCategory, Trek, 
@@ -492,7 +495,7 @@ def api_featured_treks(request):
                 Q(tags__name__icontains=cleaned)
             ).distinct()
 
-    paginator = Paginator(queryset, 8)
+    paginator = Paginator(queryset, 12)  # 12 items per page
     page_obj = paginator.get_page(page_number)
 
     results = []
@@ -501,7 +504,7 @@ def api_featured_treks(request):
         if hasattr(item, 'images') and item.images.exists():
             first_image = item.images.first()
             if hasattr(first_image, 'image_url') and first_image.image_url:
-                img_url = first_image.image_url.url if hasattr(first_image.image_url, 'url') else str(first_image.image_url)
+                img_url = str(first_image.image_url)
         elif hasattr(item, 'main_image') and item.main_image:
             img_url = item.main_image.url
 
@@ -520,7 +523,9 @@ def api_featured_treks(request):
             "duration_days": item.duration_days if hasattr(item, 'duration_days') else "3D/2N",
             "operating_days": item.operating_days if hasattr(item, 'operating_days') else "THU, FRI, SAT",
             "images": [{"image_url": img_url}] if img_url else [],
-            "operators": operators_list
+            "operators": operators_list,
+            "latitude": item.latitude,  # 🗺️ NEW: Map coordinates
+            "longitude": item.longitude  # 🗺️ NEW: Map coordinates
         })
 
     response_data = {
@@ -581,7 +586,9 @@ def api_trek_detail(request, slug):
         "activities": activities_list,
         "famous_places": places_list,
         "operators": operators_list,
-        "related_treks": related_treks
+        "related_treks": related_treks,
+        "latitude": trek_item.latitude,  # 🗺️ NEW: Map coordinates
+        "longitude": trek_item.longitude  # 🗺️ NEW: Map coordinates
     })
 @api_view(['GET'])
 def api_search_suggestions(request):
@@ -640,7 +647,9 @@ def api_travel_your_way(request):
             "duration_days": item.duration_days if hasattr(item, 'duration_days') else "3D/2N",
             "operating_days": item.operating_days if hasattr(item, 'operating_days') else "THU, FRI, SAT",
             "images": [{"image_url": img_url}] if img_url else [],
-            "operators": operators_list
+            "operators": operators_list,
+            "latitude": item.latitude,  # 🗺️ NEW: Map coordinates
+            "longitude": item.longitude  # 🗺️ NEW: Map coordinates
         })
 
     # 3. Save the serialized data to your cache for 10 minutes (matching your home template)
@@ -715,3 +724,248 @@ def api_blog_detail(request, slug):
         "has_previous": page_obj.has_previous(),
         "has_next": page_obj.has_next(),
     })
+
+
+# ============ OpenAI Destination Enrichment Endpoint ============
+
+@api_view(['GET'])
+def api_enrich_destination(request):
+    """
+    Enrich destination data using OpenAI for destinations not in database.
+    
+    Query Parameters:
+        - name: Destination name (required)
+        - lat: Latitude (optional)
+        - lon: Longitude (optional)
+        - display_name: Full location name from OSM (optional)
+    
+    Returns enriched destination data with:
+        - summary
+        - activities
+        - travel_tips
+        - difficulty
+        - best_time_to_visit
+        - altitude
+        - accommodation
+        - local_cuisine
+    """
+    from .ai_enrichment import enrich_destination_with_ai, create_fallback_enrichment
+    
+    destination_name = request.GET.get('name', '').strip()
+    
+    if not destination_name:
+        return Response({"error": "Destination name is required"}, status=400)
+    
+    # Prepare location details
+    location_details = {
+        'display_name': request.GET.get('display_name', destination_name),
+        'lat': request.GET.get('lat', ''),
+        'lon': request.GET.get('lon', '')
+    }
+    
+    # Try to enrich with AI first
+    enriched_data = enrich_destination_with_ai(destination_name, location_details)
+    
+    # Fallback to basic enrichment if AI fails
+    if not enriched_data:
+        enriched_data = create_fallback_enrichment(destination_name, location_details)
+    
+    return Response({
+        "destination": destination_name,
+        "enrichment": enriched_data
+    })
+
+
+def api_nearby_destinations(request):
+    """
+    ✅ PHASE 4: Find nearby trekking places and adventure destinations.
+    
+    Query Parameters:
+        - lat: Latitude (required)
+        - lon: Longitude (required)
+        - type: Destination type - trekking, adventure, weekend, camping, beach, nature, spiritual (optional)
+        - distance: Max distance in km (default 100, optional)
+        - limit: Max results (default 6, optional)
+    
+    Returns:
+        - nearby_destinations: List of nearby places sorted by distance
+        - current_location: Current coordinates
+    """
+    from .nearby_discovery import find_nearby_destinations, prepare_nearby_response
+    
+    try:
+        # Get parameters
+        lat = request.GET.get('lat', '').strip()
+        lon = request.GET.get('lon', '').strip()
+        dest_type = request.GET.get('type', '').strip().lower()
+        max_distance = int(request.GET.get('distance', 100))
+        limit = int(request.GET.get('limit', 6))
+        
+        # Validate required parameters
+        if not lat or not lon:
+            return Response({"error": "Latitude and longitude are required"}, status=400)
+        
+        try:
+            lat = float(lat)
+            lon = float(lon)
+        except ValueError:
+            return Response({"error": "Invalid latitude or longitude"}, status=400)
+        
+        # Find nearby destinations
+        nearby = find_nearby_destinations(
+            latitude=lat,
+            longitude=lon,
+            destination_type=dest_type if dest_type else None,
+            max_distance_km=max_distance,
+            limit=limit
+        )
+        
+        # Prepare response
+        formatted_nearby = prepare_nearby_response(nearby)
+        
+        return Response({
+            "current_location": {
+                "latitude": lat,
+                "longitude": lon
+            },
+            "type": dest_type if dest_type else "all",
+            "distance_km": max_distance,
+            "results_count": len(formatted_nearby),
+            "nearby_destinations": formatted_nearby
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching nearby destinations: {str(e)}")
+        return Response({"error": f"Error fetching nearby destinations: {str(e)}"}, status=500)
+
+
+# ========================================
+# SEARCH REFINEMENT API ENDPOINT
+# ========================================
+
+@api_view(['POST'])
+def filter_osm_results(request):
+    """
+    ✅ FINAL FIX: Filter OpenStreetMap results to only trekking destinations.
+    BUG 1: Non-trekking locations removed
+    BUG 4: Results ranked by relevance
+    
+    Request: {"results": [...]}
+    Response: {"filtered_results": [...], "message": "..."}
+    """
+    
+    from .utils import filter_osm_results as backend_filter
+    
+    try:
+        osm_results = request.data.get('results', [])
+        
+        if not osm_results:
+            return Response({
+                "filtered_results": [],
+                "rejected_count": 0,
+                "accepted_count": 0,
+                "message": "No results to filter."
+            })
+        
+        # ✅ BUG 1 & BUG 4: Filter and rank
+        filtered = backend_filter(osm_results)
+        
+        logger.info(f"✅ OSM Filter: {len(filtered)} accepted, {len(osm_results) - len(filtered)} rejected")
+        
+        return Response({
+            "filtered_results": filtered,
+            "rejected_count": len(osm_results) - len(filtered),
+            "accepted_count": len(filtered),
+            "message": f"{len(filtered)} trekking destinations found." if filtered else "No trekking destinations found."
+        })
+        
+    except Exception as e:
+        logger.error(f"Error filtering OSM results: {str(e)}")
+        return Response({
+            "error": f"Error filtering results: {str(e)}",
+            "filtered_results": [],
+            "rejected_count": 0,
+            "accepted_count": 0
+        }, status=500)
+
+
+@api_view(['GET'])
+def api_search_intelligent(request):
+    """
+    ✅ FINAL FIX: Intelligent search with robust error handling
+    BUG 2: Real destinations now found (Srisailam, Tada Falls, etc.)
+    BUG 5: Multiple query attempts and normalization
+    BUG 7: Results cached for 15 minutes
+    BUG FIX: Graceful error handling for DB and API failures
+    """
+    
+    from .utils import search_osm_multiple_queries
+    from django.core.cache import cache
+    from django.db import connection
+    import requests
+    
+    try:
+        query = request.GET.get('q', '').strip()
+        
+        if not query or len(query) < 2:
+            return Response({
+                "results": [],
+                "message": "Query too short"
+            }, status=200)  # 200 not 400 - always return valid JSON
+        
+        # BUG 7: Check cache first
+        cache_key = f"search_trek_{query.lower()}"
+        cached = cache.get(cache_key)
+        if cached:
+            logger.info(f"⚡ Cache hit: {query}")
+            return Response({
+                "results": cached,
+                "from_cache": True,
+                "message": f"{len(cached)} results from cache"
+            }, status=200)
+        
+        logger.info(f"🔍 Fresh search: {query}")
+        
+        try:
+            # Test database connection before search
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+            
+            # BUG 2 & BUG 5: Multi-query search with timeout protection
+            try:
+                results = search_osm_multiple_queries(query)
+            except requests.exceptions.Timeout:
+                logger.warning(f"⚠️ OSM API timeout for query: {query}")
+                results = []  # Return empty results instead of crashing
+            except requests.exceptions.RequestException as e:
+                logger.warning(f"⚠️ OSM API error for query: {query}: {str(e)}")
+                results = []  # Return empty results instead of crashing
+            
+            # BUG 7: Cache for 15 minutes if we got results
+            if results:
+                cache.set(cache_key, results, 60 * 15)  # 15 minutes
+            
+            # ALWAYS return 200 with valid JSON
+            return Response({
+                "results": results if results else [],
+                "from_cache": False,
+                "message": f"{len(results)} trekking destinations found" if results else "No results found. Try a different search term."
+            }, status=200)
+        
+        except Exception as db_error:
+            # Database connection error
+            logger.error(f"❌ Database error in intelligent search: {str(db_error)}")
+            return Response({
+                "results": [],
+                "message": "Search service temporarily unavailable. Please try again.",
+                "error": "database_error"
+            }, status=200)  # Return 200 not 500 - client can retry
+        
+    except Exception as e:
+        # Catch-all for unexpected errors
+        logger.error(f"❌ Unexpected error in intelligent search: {str(e)}")
+        return Response({
+            "results": [],
+            "message": "Search service error. Please try again.",
+            "error": "unexpected_error"
+        }, status=200)  # Return 200 not 500 - client can retry

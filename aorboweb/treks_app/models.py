@@ -335,6 +335,10 @@ class TrekList(models.Model):
     id = models.SlugField(primary_key=True, editable=False)
     name = models.CharField(max_length=200)
     state = models.CharField(max_length=100, blank=True, null=True)
+    
+    # 🗺️ OpenStreetMap coordinates for map integration
+    latitude = models.FloatField(blank=True, null=True, help_text="Latitude coordinate (auto-geocoded)")
+    longitude = models.FloatField(blank=True, null=True, help_text="Longitude coordinate (auto-geocoded)")
 
     is_pinned = models.BooleanField(default=False)
     pin_priority = models.PositiveIntegerField(
@@ -376,6 +380,17 @@ class TrekList(models.Model):
                 counter += 1
 
             self.id = slug
+
+        # 🗺️ Auto-geocode if coordinates are missing but state is present
+        if self.state and (not self.latitude or not self.longitude):
+            from .utils import geocode_location
+            try:
+                coords = geocode_location(self.state)
+                if coords:
+                    self.latitude = coords['lat']
+                    self.longitude = coords['lon']
+            except Exception as e:
+                print(f"Geocoding failed for {self.state}: {e}")
 
         super().save(*args, **kwargs)
 

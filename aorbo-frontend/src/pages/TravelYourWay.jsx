@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { MapPin, Clock, Calendar, ShieldCheck, ArrowUpRight } from 'lucide-react';
+import { MapPin, Clock, Calendar, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import '../styles/Home.css';
 
 const TAG_META = {
@@ -20,11 +20,13 @@ const inFlight = new Set();
 
 // 8 skeleton placeholder slots while fetching
 const SKELETON_COUNT = 8;
+const ITEMS_PER_PAGE = 8;
 
 export default function TravelYourWay() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [treks, setTreks]     = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
   const abortRef = useRef(null);
 
   const selectedTag  = (searchParams.get('tag') || 'adventure').toLowerCase();
@@ -35,6 +37,11 @@ export default function TravelYourWay() {
     label: selectedTag.charAt(0).toUpperCase() + selectedTag.slice(1),
     subtitle: 'Showing treks and trips that match your travel style.',
   };
+
+  // Reset to page 1 when tag changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedTag]);
 
   useEffect(() => {
     // Hit cache → instant render, no network
@@ -106,6 +113,19 @@ export default function TravelYourWay() {
     return () => timers.forEach(clearTimeout);
   }, [selectedTag]);
 
+  // Pagination logic
+  const totalPages = Math.ceil(treks.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedTreks = treks.slice(startIndex, endIndex);
+
+  const getPaginationPages = () => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    if (currentPage <= 3) return [1, 2, 3, 4, '...', totalPages];
+    if (currentPage >= totalPages - 2) return [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+  };
+
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
 
@@ -165,78 +185,111 @@ export default function TravelYourWay() {
 
           ) : treks.length > 0 ? (
             /* ── REAL CARDS ── */
-            <div className="row g-4">
-              {treks.map((trek) => {
-                const resolvedImageUrl =
-                  trek.images && trek.images[0] && trek.images[0].image_url
-                    ? trek.images[0].image_url.startsWith('http')
-                      ? trek.images[0].image_url
-                      : `${BACKEND_URL}${trek.images[0].image_url}`
-                    : '/images/placeholder-trek.jpg';
+            <>
+              <div className="row g-4">
+                {paginatedTreks.map((trek) => {
+                  const resolvedImageUrl =
+                    trek.images && trek.images[0] && trek.images[0].image_url
+                      ? trek.images[0].image_url.startsWith('http')
+                        ? trek.images[0].image_url
+                        : `${BACKEND_URL}${trek.images[0].image_url}`
+                      : '/images/placeholder-trek.jpg';
 
-                return (
-                  <div key={trek.id} className="col-12 col-sm-6 col-md-4 col-lg-3">
-                    <Link to={`/treks/${trek.id}`} className="text-decoration-none d-block h-100">
-                      <div className="bolt-premium-card">
-                        <div className="bolt-shine" />
-                        <div className="bolt-top-glow" />
+                  return (
+                    <div key={trek.id} className="col-12 col-sm-6 col-md-4 col-lg-3">
+                      <Link to={`/treks/${trek.id}`} className="text-decoration-none d-block h-100">
+                        <div className="bolt-premium-card">
+                          <div className="bolt-shine" />
+                          <div className="bolt-top-glow" />
 
-                        <div className="bolt-image-wrapper">
-                          <img src={resolvedImageUrl} alt={trek.name} loading="lazy" className="bolt-card-img" />
-                          <div className="bolt-image-overlay" />
-                          <div className="bolt-image-shimmer" />
-                          <div className="bolt-price-badge">
-                            <p className="bolt-price-onwards">Onwards*</p>
-                            <p className="bolt-price-value">₹{trek.price_start?.toLocaleString('en-IN')}</p>
+                          <div className="bolt-image-wrapper">
+                            <img src={resolvedImageUrl} alt={trek.name} loading="lazy" className="bolt-card-img" />
+                            <div className="bolt-image-overlay" />
+                            <div className="bolt-image-shimmer" />
+                            <div className="bolt-price-badge">
+                              <p className="bolt-price-onwards">Onwards*</p>
+                              <p className="bolt-price-value">₹{trek.price_start?.toLocaleString('en-IN')}</p>
+                            </div>
+                          </div>
+
+                          <div className="bolt-card-body">
+                            <div>
+                              <h3 className="bolt-card-title">
+                                {trek.name.charAt(0).toUpperCase() + trek.name.slice(1).toLowerCase()}
+                              </h3>
+                              <div className="bolt-location-row">
+                                <MapPin className="bolt-pin-icon" />
+                                <span className="bolt-location-text">{trek.state}</span>
+                              </div>
+                            </div>
+
+                            <div className="bolt-card-divider" />
+
+                            <div className="bolt-specs-container">
+                              <div className="bolt-spec-item">
+                                <Clock className="bolt-spec-icon" />
+                                <span className="bolt-spec-text">
+                                  <span className="bolt-spec-label">Duration: </span>
+                                  <span className="bolt-spec-val">{trek.duration_days} Days</span>
+                                </span>
+                              </div>
+                              <div className="bolt-spec-item">
+                                <Calendar className="bolt-spec-icon" />
+                                <span className="bolt-spec-text">
+                                  <span className="bolt-spec-label">Departure: </span>
+                                  <span className="bolt-spec-val">{trek.operating_days?.toUpperCase()}</span>
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="bolt-card-footer">
+                              <div className="bolt-arrow-circle">
+                                <ArrowUpRight className="bolt-arrow-icon" />
+                              </div>
+                            </div>
                           </div>
                         </div>
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
 
-                        <div className="bolt-card-body">
-                          <div>
-                            <h3 className="bolt-card-title">
-                              {trek.name.charAt(0).toUpperCase() + trek.name.slice(1).toLowerCase()}
-                            </h3>
-                            <div className="bolt-location-row">
-                              <MapPin className="bolt-pin-icon" />
-                              <span className="bolt-location-text">{trek.state}</span>
-                            </div>
-                          </div>
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="bolt-pagination-wrapper" style={{ marginTop: '3rem' }}>
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className={`bolt-pag-btn ${currentPage === 1 ? 'bolt-pag-disabled' : ''}`}
+                  >
+                    <ChevronLeft style={{ width: '16px', height: '16px' }} />
+                  </button>
 
-                          <div className="bolt-card-divider" />
+                  {getPaginationPages().map((page, i) =>
+                    page === '...' ? (
+                      <span key={`ell-${i}`} className="bolt-pag-ellipsis">···</span>
+                    ) : (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`bolt-pag-btn ${page === currentPage ? 'bolt-pag-active' : ''}`}
+                      >
+                        {page}
+                      </button>
+                    )
+                  )}
 
-                          <div className="bolt-specs-container">
-                            <div className="bolt-spec-item">
-                              <Clock className="bolt-spec-icon" />
-                              <span className="bolt-spec-text">
-                                <span className="bolt-spec-label">Duration: </span>
-                                <span className="bolt-spec-val">{trek.duration_days} Days</span>
-                              </span>
-                            </div>
-                            <div className="bolt-spec-item">
-                              <Calendar className="bolt-spec-icon" />
-                              <span className="bolt-spec-text">
-                                <span className="bolt-spec-label">Departure: </span>
-                                <span className="bolt-spec-val">{trek.operating_days?.toUpperCase()}</span>
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="bolt-card-footer">
-                            <div className="bolt-partner-badge">
-                              <ShieldCheck className="bolt-shield-icon" />
-                              <span className="bolt-partner-text">Aorbo Certified Partner</span>
-                            </div>
-                            <div className="bolt-arrow-circle">
-                              <ArrowUpRight className="bolt-arrow-icon" />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  </div>
-                );
-              })}
-            </div>
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className={`bolt-pag-btn ${currentPage === totalPages ? 'bolt-pag-disabled' : ''}`}
+                  >
+                    <ChevronRight style={{ width: '16px', height: '16px' }} />
+                  </button>
+                </div>
+              )}
+            </>
 
           ) : (
             <div

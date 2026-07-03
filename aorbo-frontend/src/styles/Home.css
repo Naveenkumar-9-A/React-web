@@ -675,3 +675,101 @@ body { background-color: #f7f5f0 !important; color: #1e293b; }
   background-size: 800px 100%;
   animation: bolt-shimmer 1.4s ease-in-out infinite;
 }
+
+/* ==========================================
+   🗺️ OPENSTREETMAP / TREK MAP STYLES
+   ========================================== */
+
+/* Leaflet map container styling */
+.leaflet-container {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #f0f4f8;
+}
+
+/* Trek marker styling */
+.trek-marker {
+  transition: all 0.2s ease;
+}
+.trek-marker:hover {
+  filter: drop-shadow(0 4px 12px rgba(255, 107, 53, 0.4));
+}
+
+/* Trek popup styling */
+.trek-popup .leaflet-popup-content-wrapper {
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #ecc258;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 0;
+}
+
+.trek-popup .leaflet-popup-content {
+  margin: 0;
+  padding: 0;
+}
+
+.trek-popup .leaflet-popup-tip {
+  background-color: #ffffff;
+  border-top-color: #ecc258;
+}
+
+/* Map controls styling */
+.leaflet-control-zoom {
+  border-radius: 8px;
+  border: 1px solid rgba(6, 36, 25, 0.1);
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+  background-color: #ffffff;
+  color: #062419;
+  font-weight: 700;
+  border: none;
+  width: 36px;
+  height: 36px;
+  line-height: 36px;
+  transition: all 0.2s ease;
+}
+
+.leaflet-control-zoom-in:hover,
+.leaflet-control-zoom-out:hover {
+  background-color: #ecc258;
+  color: #111827;
+}
+
+/* Attribution styling */
+.leaflet-attribution {
+  background-color: rgba(255, 255, 255, 0.8);
+  color: #64748b;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* Map hero integration */
+.hero-search-form + div {
+  width: 100%;
+  max-width: 800px;
+  margin: 2rem auto 0;
+}
+
+/* Responsive map sizing */
+@media (max-width: 767.98px) {
+  .trek-map {
+    height: 350px !important;
+    margin-bottom: 1rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .trek-map {
+    height: 280px !important;
+    border-radius: 12px !important;
+  }
+  
+  .trek-popup .leaflet-popup-content-wrapper {
+    max-width: 200px;
+  }
+}

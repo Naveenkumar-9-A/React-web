@@ -30,6 +30,14 @@ path('api/treks/<str:slug>/', views.api_trek_detail, name='api_trek_detail'),
 path('api/travel-your-way/', views.api_travel_your_way, name='api_travel_your_way'),
 path('api/blogs/', views.api_blogs_list, name='api_blogs_list'),
 path('api/blogs/<slug:slug>/', views.api_blog_detail, name='api_blog_detail'),
+    # AI Enrichment Endpoint
+    path('api/enrich-destination/', views.api_enrich_destination, name='api_enrich_destination'),
+    # ✅ PHASE 4: Nearby Destinations Discovery
+    path('api/nearby-destinations/', views.api_nearby_destinations, name='api_nearby_destinations'),
+    # ✅ SEARCH REFINEMENT: Backend OSM Filtering
+    path('api/search/osm-filter/', views.filter_osm_results, name='filter_osm_results'),
+    # ✅ FINAL FIX: Intelligent search with multi-query attempts
+    path('api/search/intelligent/', views.api_search_intelligent, name='api_search_intelligent'),
     # Search
     path('search/', views.search_trek, name='search_trek'),
     path('search-suggestions/', views.search_suggestions, name='search_suggestions'),
