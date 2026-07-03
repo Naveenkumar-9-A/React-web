@@ -403,13 +403,18 @@ class SearchLogAdmin(admin.ModelAdmin):
             qs = qs.filter(searched_at__gte=now - timedelta(days=30))
         elif period == 'year':
             qs = qs.filter(searched_at__year=now.year)
+        elif period == 'custom_year':
+            year = request.GET.get('year')
+            if year and year.isdigit():
+                qs = qs.filter(searched_at__year=int(year))
             
         return qs
 
     def changelist_view(self, request, extra_context=None):
         period = request.GET.get('period', '30days')
         self._current_period = period  
-
+        selected_year = request.GET.get('year', '')
+        available_years = [d.year for d in SearchLog.objects.dates('searched_at', 'year', order='DESC')]
         qs = self.get_queryset(request)
         total_searches = qs.count()
 
@@ -453,6 +458,8 @@ class SearchLogAdmin(admin.ModelAdmin):
         # ✅ 3. Update variables sent to Chart.js backend context
         extra = {
             'period': period,
+            'selected_year': selected_year,
+            'available_years': available_years,
             'total_searches': total_searches,
             'top_query': top_query,
             'top_query_count': top_query_count,
@@ -472,5 +479,7 @@ class SearchLogAdmin(admin.ModelAdmin):
         request.GET = request.GET.copy()
         if 'period' in request.GET:
             request.GET.pop('period')
+        if 'year' in request.GET:
+            request.GET.pop('year')
 
         return super().changelist_view(request, extra_context=extra_context)

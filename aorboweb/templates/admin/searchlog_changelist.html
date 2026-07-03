@@ -38,6 +38,13 @@ setInterval(function() {
 .analytics-filter a { padding: 6px 14px; border-radius: 6px; font-size: 13px; text-decoration: none; border: 1px solid #dee2e6; color: #495057; background: #fff; }
 .analytics-filter a.active { background: #0d6efd; color: #fff; border-color: #0d6efd; }
 .analytics-divider { border: none; border-top: 1px solid #e9ecef; margin: 1.5rem 0; }
+.analytics-filter a { box-sizing: border-box; }
+.year-group { display: flex; align-items: stretch; border-radius: 6px; overflow: hidden; border: 1px solid #dee2e6; }
+.year-group.active { border-color: #0d6efd; }
+.year-group .year-btn { box-sizing: border-box; padding: 6px 14px; font-size: 13px; text-decoration: none; color: #495057; background: #fff; border: 1px solid transparent; }
+.year-group.active .year-btn { background: #0d6efd; color: #fff; }
+.year-group select { box-sizing: border-box; padding: 6px 8px; font-size: 13px; border: 1px solid transparent; border-left: 1px solid #dee2e6; background: #fff; color: #495057; }
+.year-group.active select { border-left-color: rgba(255,255,255,0.4); }
 </style>
 {% endblock %}
 
@@ -46,7 +53,15 @@ setInterval(function() {
     <a href="?period=today{% if request.GET.tag %}&tag={{ request.GET.tag }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="{% if period == 'today' %}active{% endif %}">Today</a>
     <a href="?period=7days{% if request.GET.tag %}&tag={{ request.GET.tag }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="{% if period == '7days' %}active{% endif %}">Last 7 days</a>
     <a href="?period=30days{% if request.GET.tag %}&tag={{ request.GET.tag }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="{% if period == '30days' or not period %}active{% endif %}">Last 30 days</a>
-    <a href="?period=year{% if request.GET.tag %}&tag={{ request.GET.tag }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="{% if period == 'year' %}active{% endif %}">This Year</a>
+<div class="year-group {% if period == 'year' or period == 'custom_year' %}active{% endif %}">
+        <a href="?period=year{% if request.GET.tag %}&tag={{ request.GET.tag }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="year-btn">This Year</a>
+        <select id="customYearSelect">
+            <option value="">-</option>
+            {% for y in available_years %}
+                <option value="{{ y }}" {% if selected_year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+    </div>
     <a href="?period=all{% if request.GET.tag %}&tag={{ request.GET.tag }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="{% if period == 'all' %}active{% endif %}">All time</a>
   </div>
 
@@ -152,6 +167,17 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+});
+</script>
+
+<script>
+document.getElementById('customYearSelect').addEventListener('change', function() {
+    var year = this.value;
+    if (!year) return;
+    var params = new URLSearchParams(window.location.search);
+    params.set('period', 'custom_year');
+    params.set('year', year);
+    window.location.search = params.toString();
 });
 </script>
 {% endblock %}
