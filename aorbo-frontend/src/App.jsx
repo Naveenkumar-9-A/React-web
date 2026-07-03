@@ -35,9 +35,10 @@ export default function App() {
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/user-agreement" element={<UserAgreement />} />
-<Route path="/treks/:id" element={<CardDetails key={window.location.pathname} />} />   
-<Route path="/treks/:id/details" element={<CardDetails />} />
-     <Route path="/travel-your-way" element={<TravelYourWay />} />
+        <Route path="/treks/:id" element={<CardDetails key={window.location.pathname} />} />   
+        <Route path="/treks/:id/details" element={<CardDetails />} />
+        <Route path="/destination/:slug" element={<CardDetails />} />
+        <Route path="/travel-your-way" element={<TravelYourWay />} />
       </Routes>
 
       {/* Dynamic Global Footer */}

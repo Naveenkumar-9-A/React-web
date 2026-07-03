@@ -2,118 +2,43 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { MapPin, Clock, Calendar, ShieldCheck, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, Clock, Calendar, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import TrekMap from '../components/TrekMap';
+import DestinationCard from '../components/DestinationCard';
+import { useEnhancedSearch } from '../hooks/useEnhancedSearch';
+import { generateSlug } from '../utils/slugUtils';
 import '../styles/Home.css';
 
 export default function Home() {
   const [featuredTreks, setFeaturedTreks] = useState([]);
+  const [allTreksForSearch, setAllTreksForSearch] = useState([]); // 🔍 All treks for search (not paginated)
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedTag, setSelectedTag] = useState('');
+  const [showHeroMap, setShowHeroMap] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const suggestionRef = useRef(null);
+  const allTreksFetched = useRef(false); // 🔍 Track if we've fetched all treks
 
+  // Define BACKEND_URL first!
   const BACKEND_URL = 'http://127.0.0.1:8000';
 
-  // ================= CARD STYLES (same as TravelYourWay.jsx) =================
-  const cardStyles = {
-    premiumCard: {
-      backgroundColor: '#ffffff',
-      borderRadius: '16px',
-      border: '1px solid #e5e7eb',
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
-      textDecoration: 'none',
-      color: 'inherit',
-      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
-      transition: 'all 0.3s ease',
-      height: '100%'
-    },
-    imageWrapper: {
-      position: 'relative',
-      width: '100%',
-      paddingTop: '75%',
-      overflow: 'hidden'
-    },
-    imageInner: {
-      position: 'absolute',
-      inset: 0,
-      overflow: 'hidden'
-    },
-    cardImg: {
-      width: '100%',
-      height: '100%',
-      objectFit: 'cover',
-      display: 'block',
-      transition: 'transform 0.5s ease'
-    },
-    pricePill: {
-      position: 'absolute',
-      bottom: '16px',
-      right: '16px',
-      background: 'linear-gradient(135deg, #ff7a18, #ff3d00)',
-      color: '#fff',
-      padding: '8px 14px',
-      borderRadius: '40px',
-      boxShadow: '0 6px 16px rgba(0,0,0,.35)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'flex-end',
-      gap: '2px'
-    },
-    priceOnwards: {
-      fontSize: '0.5rem',
-      fontWeight: '600',
-      letterSpacing: '0.05em',
-      opacity: '0.9'
-    },
-    priceValue: {
-      fontSize: '0.95rem',
-      fontWeight: '800',
-      lineHeight: '1'
-    },
-    cardContent: {
-      padding: '1rem',
-      display: 'flex',
-      flexDirection: 'column',
-      flexGrow: 1
-    },
-    locationText: {
-      color: '#4b5563',
-      fontWeight: '500',
-      fontSize: '0.9rem',
-      margin: '0 0 0.5rem 0'
-    },
-    days: {
-      fontSize: '13px',
-      color: '#374151',
-      margin: '0 0 0.25rem 0'
-    },
-    operatorGridWrapper: {
-      marginTop: 'auto',
-      paddingTop: '0.75rem',
-      borderTop: '1px solid #e5e7eb'
-    },
-    badgeContainer: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '6px'
-    },
-    operatorBadgePremium: {
-      backgroundColor: '#f97316',
-      color: '#ffffff',
-      fontSize: '0.7rem',
-      fontWeight: '600',
-      padding: '5px 12px',
-      borderRadius: '16px',
-      border: 'none'
-    }
-  };
+const {
+  filteredTreks,
+  osmResults,
+  highlightedTrekId,
+  isLoading,
+  loadingMessage,
+  errorMessage,
+  handleSearch,
+  handleMapMarkerClick,
+  clearSearch,
+} = useEnhancedSearch(allTreksForSearch, BACKEND_URL); // 🔍 Search against ALL treks with backend URL for AI enrichment
+
 
   useEffect(() => {
     const tag = searchParams.get('tag') || '';
@@ -121,6 +46,12 @@ export default function Home() {
     setSelectedTag(tag);
     setCurrentPage(page);
     fetchTreks(page, tag);
+    
+    // 🔍 Fetch all treks for search (only once on mount)
+    if (!allTreksFetched.current) {
+      fetchAllTreksForSearch();
+      allTreksFetched.current = true;
+    }
   }, [searchParams]);
 
   const fetchTreks = async (page = 1, tag = '') => {
@@ -134,72 +65,166 @@ export default function Home() {
     }
   };
 
-  const debounceRef = useRef(null);
+// 🔍 Fetch ALL treks for search (no pagination) - called once on mount
+const fetchAllTreksForSearch = async () => {
+  try {
+    const allTreks = [];
+    let page = 1;
+    let hasMore = true;
 
-const handleSearchInput = async (e) => {
-    const val = e.target.value;
-    setSearchQuery(val);
+    while (hasMore && page <= 10) {
+      const res = await fetch(`${BACKEND_URL}/api/treks/?page=${page}`);
+      const data = await res.json();
 
-    if (val.length < 2) {
-        setSuggestions([]);
-        setShowSuggestions(false);
-        clearTimeout(debounceRef.current);
-        return;
+      if (data.results && data.results.length > 0) {
+        allTreks.push(...data.results);
+        page++;
+        hasMore = page <= (data.total_pages || 1);
+      } else {
+        hasMore = false;
+      }
     }
 
-    // ✅ Wait 500ms after user stops typing — then fire ONE request
+    setAllTreksForSearch(allTreks);
+    console.log(`✅ Loaded ${allTreks.length} treks for search functionality`);
+  } catch (err) {
+    console.error('Failed to fetch all treks for search', err);
+  }
+};
+
+const debounceRef = useRef(null);
+
+const handleSearchInput = (e) => {
+  const val = e.target.value;
+  setSearchQuery(val);
+
+  // Show map when typing
+  if (val.length >= 2) {
+    setShowHeroMap(true);
+    handleSearch(val);
+  }
+
+  if (val.length < 2) {
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setShowHeroMap(false);
+    clearSearch();
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-        try {
-            const res = await fetch(`${BACKEND_URL}/api/treks/search/?q=${val}`);
-            const data = await res.json();
-            setSuggestions(data);
-            setShowSuggestions(true);
-        } catch (err) {
-            console.error(err);
-        }
-    }, 500);
+    return;
+  }
+
+  clearTimeout(debounceRef.current);
+
+  // Wait 500ms before requesting suggestions
+  debounceRef.current = setTimeout(async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/treks/search/?q=${val}`);
+      const data = await res.json();
+
+      const trekSuggestions = Array.isArray(data) ? data : [];
+
+      setSuggestions(trekSuggestions.slice(0, 8));
+      setShowSuggestions(true);
+    } catch (err) {
+      console.error('Search error:', err);
+      setSuggestions([]);
+    }
+  }, 500);
 };
 
  const handleSearchSubmit = (e) => {
     e.preventDefault();
+
     if (!searchQuery.trim()) return;
 
-    // If there's a suggestion match, go to first suggestion
     if (suggestions.length > 0) {
         const first = suggestions[0];
+
         fetch(`${BACKEND_URL}/api/treks/log-click/`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ trek_id: first.id, query: searchQuery })
-        });
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                trek_id: first.id,
+                query: searchQuery,
+            }),
+        }).catch(() => {});
+
         navigate(`/treks/${first.id}`);
         setShowSuggestions(false);
         return;
     }
 
-    // If no suggestions, go to travel-your-way as fallback
-    navigate(`/travel-your-way?q=${searchQuery}`);
+    navigate(`/travel-your-way?q=${encodeURIComponent(searchQuery)}`);
 };
 
-  const handleSuggestionClick = (trek) => {
-    // ✅ Log the trek click
-    fetch(`${BACKEND_URL}/api/treks/log-click/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trek_id: trek.id, query: searchQuery })
+const handleSuggestionClick = (suggestion) => {
+  // ✅ Log click (only if backend is available)
+  fetch(`${BACKEND_URL}/api/treks/log-click/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      trek_id: suggestion.id || null,
+      query: searchQuery,
+      source: suggestion.type === 'osm' ? 'osm' : 'database',
+    }),
+  }).catch((err) => console.log("Click log failed:", err));
+
+  // ✅ Navigate based on suggestion type
+  if (suggestion.type === 'osm') {
+    const slug = generateSlug(suggestion.name);
+
+    navigate(`/destination/${slug}`, {
+      state: {
+        source: 'osm',
+        destination: suggestion,
+      },
     });
+  } else {
+    navigate(`/treks/${suggestion.id}`);
+  }
 
-    navigate(`/treks/${trek.id}`);
-    setShowSuggestions(false);
+  setShowSuggestions(false);
+  setSearchQuery('');
 };
+
+// ✅ Handle tag click (from main branch)
 const handleTagClick = (tag) => {
-    fetch(`${BACKEND_URL}/api/treks/log-click/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: '', tag: tag })
-    });
+  fetch(`${BACKEND_URL}/api/treks/log-click/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query: '',
+      tag: tag,
+    }),
+  }).catch((err) => console.log("Tag log failed:", err));
 };
+
+// ✅ Handle map marker click
+const handleMapMarkerClickWithNav = (trek) => {
+  handleMapMarkerClick(trek);
+
+  if (!trek.id) return;
+
+  if (String(trek.id).startsWith('osm-')) {
+    const slug = generateSlug(trek.name);
+
+    navigate(`/destination/${slug}`, {
+      state: {
+        source: 'osm',
+        destination: trek,
+      },
+    });
+  } else {
+    navigate(`/treks/${trek.id}`);
+  }
+};
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (suggestionRef.current && !suggestionRef.current.contains(e.target)) {
@@ -222,8 +247,6 @@ const handleTagClick = (tag) => {
     if (currentPage >= totalPages - 2) return [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
     return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
   };
-
-  const paginationBtnStyle = 'flex items-center justify-center w-9 h-9 rounded-full text-sm font-semibold transition-all duration-200 select-none text-decoration-none';
 
   return (
     <>
@@ -269,7 +292,13 @@ const handleTagClick = (tag) => {
             <p className="hero-subtitle mb-4">
               Search for your next trek or destination and start planning an unforgettable experience.
             </p>
-            <form className="hero-search-form" onSubmit={handleSearchSubmit}>
+
+
+            <form
+              className="hero-search-form"
+              onSubmit={handleSearchSubmit}
+            >
+
               <div className="hero-search-wrapper" ref={suggestionRef}>
                 <input
                   type="text"
@@ -281,6 +310,7 @@ const handleTagClick = (tag) => {
                   value={searchQuery}
                   onChange={handleSearchInput}
                 />
+
                 <button type="submit" className="hero-search-button" aria-label="Search">
                   <svg xmlns="http://www.w3.org/2000/svg" className="hero-search-icon" viewBox="0 0 24 24">
                     <path d="M10 4a6 6 0 0 1 4.8 9.6l3.8 3.8a1 1 0 0 1-1.4 1.4l-3.8-3.8A6 6 0 1 1 10 4zm0 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />
@@ -288,20 +318,129 @@ const handleTagClick = (tag) => {
                 </button>
                 {showSuggestions && suggestions.length > 0 && (
                   <div id="search-suggestions" className="search-suggestions" style={{ display: 'block' }}>
-                    {suggestions.map((trek) => (
+                    {suggestions.map((suggestion) => (
                       <div
-                        key={trek.id}
+                        key={`${suggestion.type || 'trek'}-${suggestion.id}`}
                         className="search-suggestion-item"
-                        onClick={() => handleSuggestionClick(trek)}
+                        onClick={() => handleSuggestionClick(suggestion)}
+                        style={{ cursor: 'pointer', padding: '10px 12px', borderBottom: '1px solid #eee' }}
                       >
-                        <span className="search-suggestion-main">{trek.name}</span>
-                        <span className="search-suggestion-secondary">{trek.state}</span>
+                        {suggestion.type === 'osm' ? (
+                          <>
+                            <span className="search-suggestion-main">
+                              📍 {suggestion.name}
+                            </span>
+                            <span className="search-suggestion-secondary">
+                              {suggestion.display_name?.substring(0, 60)}...
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="search-suggestion-main">
+                              🏔️ {suggestion.label || suggestion.name}
+                            </span>
+                            <span className="search-suggestion-secondary">
+                              {suggestion.state || 'Trek'}
+                            </span>
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>
                 )}
               </div>
             </form>
+
+            {/* 🗺️ ENHANCED: OpenStreetMap with Trek Database + Nominatim Results */}
+            {showHeroMap && searchQuery.length >= 2 && (
+              <div style={{ marginTop: '2rem', maxWidth: '800px', margin: '2rem auto 0' }}>
+                {/* Search Status */}
+                {isLoading && filteredTreks.length === 0 && (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '1rem', 
+                    background: '#fef3c7', 
+                    borderRadius: '8px', 
+                    marginBottom: '1rem',
+                    fontSize: '13px',
+                    color: '#92400e'
+                  }}>
+                    🔍 {loadingMessage || 'Searching for locations...'}
+                  </div>
+                )}
+
+                {/* Trek Results Found */}
+                {filteredTreks.length > 0 && (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '0.8rem', 
+                    background: '#dcfce7', 
+                    borderRadius: '8px', 
+                    marginBottom: '1rem',
+                    fontSize: '13px',
+                    color: '#166534'
+                  }}>
+                    ✅ Found {filteredTreks.length} trek package{filteredTreks.length !== 1 ? 's' : ''} in "{searchQuery}"
+                  </div>
+                )}
+
+                {/* OSM Results Found */}
+                {osmResults.length > 0 && filteredTreks.length === 0 && (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '0.8rem', 
+                    background: '#dbeafe', 
+                    borderRadius: '8px', 
+                    marginBottom: '1rem',
+                    fontSize: '13px',
+                    color: '#1e40af'
+                  }}>
+                    📍 Showing destination results from OpenStreetMap for "{searchQuery}"
+                  </div>
+                )}
+
+                {/* No Results */}
+                {!isLoading && filteredTreks.length === 0 && osmResults.length === 0 && (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '1rem', 
+                    background: '#fee2e2', 
+                    borderRadius: '8px', 
+                    marginBottom: '1rem',
+                    fontSize: '13px',
+                    color: '#991b1b'
+                  }}>
+                    ❌ {errorMessage || `No results found for "${searchQuery}"`}
+                  </div>
+                )}
+
+                {/* Map Component */}
+                <TrekMap
+                  treks={filteredTreks}
+                  osmResults={osmResults}
+                  searchedLocation={searchQuery}
+                  onMarkerClick={handleMapMarkerClickWithNav}
+                  highlightedTrekId={highlightedTrekId}
+                />
+
+                {/* OSM Destination Cards */}
+                {osmResults.length > 0 && filteredTreks.length === 0 && (
+                  <div style={{ marginTop: '2rem', maxWidth: '800px', margin: '2rem auto 0' }}>
+                    <h4 style={{ 
+                      color: '#ffffff', 
+                      marginBottom: '1rem',
+                      fontSize: '1.1rem',
+                      fontWeight: '600'
+                    }}>
+                      Destination Details
+                    </h4>
+                    {osmResults.map((destination) => (
+                      <DestinationCard key={destination.id} destination={destination} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -325,8 +464,9 @@ const handleTagClick = (tag) => {
             </p>
           )}
 
+          {/* ALWAYS SHOW FEATURED TREKS - NOT AFFECTED BY SEARCH */}
           <div className="row g-4" id="featured-trek-grid">
-            {featuredTreks.length > 0 ? (
+            {featuredTreks && featuredTreks.length > 0 ? (
               featuredTreks.map((trek, index) => {
                 const resolvedImageUrl = trek.images && trek.images[0] && trek.images[0].image_url
                   ? trek.images[0].image_url.startsWith('http')
@@ -337,7 +477,7 @@ const handleTagClick = (tag) => {
                 return (
                   <div
                     key={trek.id}
-                    className={`col-12 col-sm-6 col-md-4 col-lg-3 ${index >= 8 ? 'extra-trek-card d-none' : ''}`}
+                    className="col-12 col-sm-6 col-md-4 col-lg-3"
                   >
                     <Link to={`/treks/${trek.id}`}  className="text-decoration-none d-block h-100"
                     onClick={() => {
@@ -406,10 +546,7 @@ const handleTagClick = (tag) => {
 
                           {/* Custom Partner Footer Bar*/}
                           <div className="bolt-card-footer">
-                            {/* <div className="bolt-partner-badge">
-                              <ShieldCheck className="bolt-shield-icon" />
-                              <span className="bolt-partner-text">Aorbo Certified Partner</span>
-                            </div>  */}
+
                             <div className="bolt-arrow-circle">
                               <ArrowUpRight className="bolt-arrow-icon" />
                             </div>

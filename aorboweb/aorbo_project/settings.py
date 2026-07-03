@@ -201,8 +201,10 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle'
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/day',
-        'user': '1000/day'
+        # DEBUG mode: Relaxed limits for development
+        # PRODUCTION mode: Strict limits for security
+        'anon': '10000/hour' if DEBUG else '100/hour',  # 10,000/hour in DEBUG, 100/hour in production
+        'user': '50000/hour' if DEBUG else '1000/hour'  # 50,000/hour in DEBUG, 1,000/hour in production
     }
 }
 
