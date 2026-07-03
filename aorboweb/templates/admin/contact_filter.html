@@ -1,0 +1,236 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+.cs-wrap *{box-sizing:border-box;font-family:'Segoe UI',system-ui,sans-serif}
+.cs-wrap{background:#ffffff;padding:20px;border-radius:10px;margin-top:10px}
+.cs-title{font-size:17px;font-weight:600;color:#1a1f36;margin-bottom:16px}
+
+/* User type tabs */
+.cs-tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap;background:#f6f9fc;border:1px solid #e3e8ef;border-radius:8px;padding:4px}
+.cs-tab{padding:6px 14px;border-radius:6px;font-size:12.5px;cursor:pointer;color:#697386;border:none;background:none;font-weight:500}
+.cs-tab.active{background:#4f46e5;color:#ffffff !important}
+.cs-tab:hover:not(.active){background:#ede9fe;color:#4f46e5}
+
+/* Date range tabs - same white style */
+.cs-date-tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap;background:#f6f9fc;border:1px solid #e3e8ef;border-radius:8px;padding:4px}
+.cs-date-tab{padding:6px 14px;border-radius:6px;font-size:12.5px;cursor:pointer;color:#697386;border:none;background:none;font-weight:500}
+.cs-date-tab.active{background:#4f46e5;color:#ffffff !important}
+.cs-date-tab:hover:not(.active){background:#ede9fe;color:#4f46e5}
+
+.cs-search-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.cs-search-box{display:flex;align-items:center;gap:6px;background:#f6f9fc;border:1px solid #e3e8ef;border-radius:6px;padding:7px 12px;flex:1;max-width:400px}
+.cs-search-box input{border:none;outline:none;font-size:13px;color:#1a1f36 !important;background:transparent;width:100%}
+.cs-result{font-size:12px;color:#697386}
+
+.cs-table-wrap{background:#ffffff;border:1px solid #e3e8ef;border-radius:10px;overflow:auto}
+.cs-table{width:100%;border-collapse:collapse;background:#ffffff;min-width:900px}
+.cs-table thead tr{background:#f6f9fc !important}
+.cs-table thead th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#697386 !important;border-bottom:1px solid #e3e8ef;white-space:nowrap;background:#f6f9fc !important}
+.cs-table tbody tr{border-bottom:1px solid #f0f4f8;background:#ffffff !important}
+.cs-table tbody tr:last-child{border-bottom:none}
+.cs-table tbody tr:hover{background:#f8faff !important}
+.cs-table tbody td{padding:11px 14px;font-size:13px;color:#1a1f36 !important;background:#ffffff !important;vertical-align:top}
+.cs-name{font-weight:600;color:#1a1f36 !important}
+.cs-muted{color:#6b7280 !important;font-size:12.5px}
+.cs-comment{color:#374151;font-size:12px;max-width:200px;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cs-comment.expanded{-webkit-line-clamp:unset;display:block}
+.cs-comment-toggle{display:block;margin-top:4px;font-size:11px;color:#4f46e5;background:none;border:none;cursor:pointer;padding:0;font-weight:600}
+
+.badge{display:inline-flex;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.b-trekker{background:#eef2ff;color:#4f46e5 !important}
+.b-organizer{background:#fff7ed;color:#c2410c !important}
+.b-other{background:#f0fdf4;color:#166534 !important}
+
+.cs-empty{padding:40px;text-align:center;color:#9ea8b3;font-size:13px;background:#ffffff}
+.cs-count{background:#e0e7ff;color:#4f46e5;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:5px}
+.cs-time{font-size:11px;color:#9ca3af;display:block;margin-top:2px}
+</style>
+
+<div class="cs-wrap">
+  <div class="cs-title">📬 Contact Submissions</div>
+
+  <!-- USER TYPE TABS -->
+  <div class="cs-tabs">
+    <button class="cs-tab active" onclick="switchTab('All',this)">
+      All <span class="cs-count" id="cnt-All">0</span>
+    </button>
+    <button class="cs-tab" onclick="switchTab('trekker',this)">
+      Trekker <span class="cs-count" id="cnt-trekker">0</span>
+    </button>
+    <button class="cs-tab" onclick="switchTab('organizer',this)">
+      Trek Organizer <span class="cs-count" id="cnt-organizer">0</span>
+    </button>
+    <button class="cs-tab" onclick="switchTab('other',this)">
+      Other <span class="cs-count" id="cnt-other">0</span>
+    </button>
+  </div>
+
+  <!-- DATE RANGE TABS -->
+  <div class="cs-date-tabs">
+    <button class="cs-date-tab active" onclick="switchDate('all',this)">All Time</button>
+    <button class="cs-date-tab" onclick="switchDate('today',this)">Today</button>
+    <button class="cs-date-tab" onclick="switchDate('week',this)">This Week</button>
+    <button class="cs-date-tab" onclick="switchDate('year',this)">This Year</button>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="cs-search-row">
+    <div class="cs-search-box">
+      🔍
+      <input id="csSearch" placeholder="Search name, email, mobile or message…" oninput="renderTable()"/>
+    </div>
+    <div class="cs-result" id="csResult"></div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="cs-table-wrap">
+    <table class="cs-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Mobile</th>
+          <th>User Type</th>
+          <th>Trek Category</th>
+          <th>Message</th>
+          <th>Date & Time</th>
+        </tr>
+      </thead>
+      <tbody id="csBody"></tbody>
+    </table>
+    <div id="csEmpty" class="cs-empty" style="display:none">🔍 No results found</div>
+  </div>
+</div>
+
+<script>
+const data = {{ submissions_json|safe }};
+let activeTab = "All";
+let activeDateRange = "all";
+const TAB_KEYS = ["All", "trekker", "organizer", "other"];
+
+function parseDate(str){ return str ? new Date(str) : null; }
+
+function isInRange(dateStr, range){
+  if(range === "all") return true;
+  const d = parseDate(dateStr);
+  if(!d) return false;
+  const now = new Date();
+  if(range === "today"){
+    return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth() && d.getDate()===now.getDate();
+  }
+  if(range === "week"){
+    const start = new Date(now);
+    start.setDate(now.getDate()-now.getDay());
+    start.setHours(0,0,0,0);
+    return d >= start;
+  }
+  if(range === "year") return d.getFullYear()===now.getFullYear();
+  return true;
+}
+
+function countFor(tab){
+  const byDate = data.filter(d => isInRange(d.created_at, activeDateRange));
+  return tab==="All" ? byDate.length : byDate.filter(d=>d.user_type===tab).length;
+}
+
+function initCounts(){
+  TAB_KEYS.forEach(t => {
+    const el = document.getElementById("cnt-"+t);
+    if(el) el.textContent = countFor(t);
+  });
+}
+
+function switchTab(tab, btn){
+  activeTab = tab;
+  document.getElementById("csSearch").value = "";
+  document.querySelectorAll(".cs-tab").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  renderTable();
+}
+
+function switchDate(range, btn){
+  activeDateRange = range;
+  document.getElementById("csSearch").value = "";
+  document.querySelectorAll(".cs-date-tab").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  initCounts();
+  renderTable();
+}
+
+function badgeClass(t){
+  if(t==="trekker") return "b-trekker";
+  if(t==="organizer") return "b-organizer";
+  return "b-other";
+}
+
+function badgeLabel(t){
+  if(t==="trekker") return "Trekker";
+  if(t==="organizer") return "Trek Organizer";
+  return "Other";
+}
+
+function categoryLabel(c){
+  const map={adventure:"Adventure Treks",weekend:"Weekend Treks",nature:"Nature Escapes",beach:"Beach Treks",camping:"Camping Treks",spiritual:"Spiritual Treks"};
+  return map[c]||c||"—";
+}
+
+function formatDateTime(str){
+  if(!str) return "—";
+  const d = new Date(str);
+  if(isNaN(d)) return str;
+  const date = d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+  const time = d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
+  return `<span style="color:#374151">${date}</span><span class="cs-time">⏰ ${time}</span>`;
+}
+
+function renderTable(){
+  const q = document.getElementById("csSearch").value.toLowerCase();
+  let rows = data.filter(d=>isInRange(d.created_at, activeDateRange));
+  if(activeTab!=="All") rows = rows.filter(d=>d.user_type===activeTab);
+  if(q){
+    rows = rows.filter(d=>
+      (d.name||"").toLowerCase().includes(q)||
+      (d.email||"").toLowerCase().includes(q)||
+      (d.mobile||"").includes(q)||
+      (d.comment||"").toLowerCase().includes(q)
+    );
+  }
+
+  document.getElementById("csResult").textContent = rows.length+" result"+(rows.length!==1?"s":"");
+  const tbody = document.getElementById("csBody");
+  const empty = document.getElementById("csEmpty");
+
+  if(!rows.length){
+    tbody.innerHTML="";
+    empty.style.display="block";
+    return;
+  }
+  empty.style.display="none";
+  tbody.innerHTML = rows.map((r,i)=>`
+    <tr>
+      <td class="cs-muted">${i+1}</td>
+      <td><span class="cs-name">${r.name||"—"}</span></td>
+      <td><span class="cs-muted">${r.email||"—"}</span></td>
+      <td style="color:#1a1f36;font-weight:500">${r.mobile||"—"}</td>
+      <td><span class="badge ${badgeClass(r.user_type)}">${badgeLabel(r.user_type)}</span></td>
+      <td><span class="cs-muted">${categoryLabel(r.trek_category)}</span></td>
+      <td><span class="cs-comment" id="comment-${i}">${r.comment||"—"}</span>${(r.comment||"").length>60?`<button class="cs-comment-toggle" onclick="toggleComment(${i})">Show more</button>`:""}</td>
+      <td>${formatDateTime(r.created_at)}</td>
+    </tr>
+  `).join("");
+}
+
+function toggleComment(i){
+  const el = document.getElementById("comment-"+i);
+  const btn = el.nextElementSibling;
+  el.classList.toggle("expanded");
+  btn.textContent = el.classList.contains("expanded") ? "Show less" : "Show more";
+}
+
+initCounts();
+renderTable();
+</script>
+{% endblock %}

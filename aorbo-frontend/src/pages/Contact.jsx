@@ -15,6 +15,7 @@ export default function Contact() {
   const [showTrekCategory, setShowTrekCategory] = useState(false);
   const [showVendorInfo, setShowVendorInfo] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState(null);  
 
   useEffect(() => {
     fetch('/api/contact-info/')
@@ -39,19 +40,29 @@ export default function Contact() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await fetch('/api/contact/', {
+     const res = await fetch('/contact/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-    } catch (err) {
-      console.error(err);
+      const result = await res.json();
+      if (res.ok) {
+        setToast({ type: 'success', msg: "✅ Message sent! We'll get back to you soon." });
+        setFormData({ name: '', email: '', mobile: '', user_type: '', trek_category: '', comment: '' });
+        setShowTrekCategory(false);
+        setShowVendorInfo(false);
+      } else {
+        setToast({ type: 'error', msg: `❌ ${result.message || 'Something went wrong.'}` });
+      }
+    } catch {
+      setToast({ type: 'error', msg: '❌ Network error. Please try again.' });
     }
     setSubmitting(false);
+    setTimeout(() => setToast(null), 4000);
   };
 
   return (
@@ -284,6 +295,13 @@ export default function Contact() {
       <div id="lottieAnimation" className="lottie-animation">
         <div id="lottieContainer"></div>
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`contact-toast contact-toast--${toast.type}`}>
+          {toast.msg}
+        </div>
+      )}
     </main>
   );
 }

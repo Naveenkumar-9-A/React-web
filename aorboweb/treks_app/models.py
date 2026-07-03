@@ -59,15 +59,35 @@ def validate_image_file_extension(value):
 
 class Contact(models.Model):
     """Store contact form submissions."""
+    USER_TYPE_CHOICES = [
+        ('trekker', 'Trekker'),
+        ('organizer', 'Trek Organizer'),
+        ('other', 'Other'),
+    ]
+    TREK_CATEGORY_CHOICES = [
+        ('adventure', 'Adventure Treks'),
+        ('weekend', 'Weekend Treks'),
+        ('nature', 'Nature Escapes'),
+        ('beach', 'Beach Treks'),
+        ('camping', 'Camping Treks'),
+        ('spiritual', 'Spiritual Treks'),
+    ]
+
     name = models.CharField(max_length=100)
     email = models.EmailField(max_length=100)
     mobile = models.CharField(max_length=20)
-    user_type = models.CharField(max_length=50, blank=True, null=True)
+    user_type = models.CharField(max_length=50, choices=USER_TYPE_CHOICES, blank=True, null=True)
+    trek_category = models.CharField(max_length=50, choices=TREK_CATEGORY_CHOICES, blank=True, null=True)
     comment = models.TextField()
     created_at = models.DateTimeField(default=timezone.now)
-    
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Contact Submission'
+        verbose_name_plural = 'Contact Submissions'
+
     def __str__(self):
-        return f"{self.name} - {self.email}"
+        return f"{self.name} — {self.user_type} ({self.created_at.strftime('%d %b %Y')})"
     
 class Blog(models.Model):
     """Blog articles with WebP images stored ONLY in Supabase (no media files)."""
