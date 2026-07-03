@@ -453,6 +453,9 @@ class TrekImage(models.Model):
             elif ext == "png":
                 img.save(img_io, format="PNG", optimize=True)
                 mime = "image/png"
+            elif ext == "webp":
+                img.save(img_io, format="WEBP", quality=80)
+                mime = "image/webp"
             else:
                 img.save(img_io, format=img.format)
                 mime = mimetypes.guess_type(self.image.name)[0] or "application/octet-stream"
@@ -477,4 +480,14 @@ class TrekImage(models.Model):
     def __str__(self):
         return self.caption or f"{self.trek.name} - Image"
     
-    
+class SearchLog(models.Model):
+    query = models.CharField(max_length=255, blank=True)
+    tag = models.CharField(max_length=100, blank=True)
+    trek = models.ForeignKey(
+        TrekList, on_delete=models.SET_NULL,
+        null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    searched_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.query or self.tag} @ {self.searched_at}"

@@ -31,27 +31,37 @@ body { background-color: #f7f5f0 !important; color: #1e293b; }
 /* ==========================================
    HERO / LANDING LAYER
    ========================================== */
-.hero-landing { position: relative; width: 100%; margin-bottom: 0; }
+.hero-landing { position: relative; width: 100%; margin-bottom: 0;height: 80vh;min-height: 650px; }
 .hero-carousel, .hero-carousel .carousel-inner, .hero-carousel .carousel-item { height: 100%; }
 .hero-carousel .hero-img { width: 100%; height: 100%; object-fit: cover; }
 
 .hero-overlay-content {
-  position: absolute; inset: 0;
-  display: flex; flex-direction: column;
-  justify-content: center; align-items: center;
+  position: absolute; 
+  inset: 0;
+  display: flex; 
+  flex-direction: column;
+  justify-content: center; 
+  align-items: center;
   text-align: center;
-  background: linear-gradient(135deg, rgba(6, 36, 25, 0.9) 0%, rgba(15, 23, 42, 0.5) 60%, rgba(6, 36, 25, 0.85) 100%);
+  /* Converted heavy dark mask to an ultra-soft subtle gradient shade */
+  background: linear-gradient(
+    to bottom, 
+    rgba(6, 36, 25, 0.25) 0%, 
+    rgba(15, 23, 42, 0.4) 50%, 
+    rgba(17, 22, 34, 0.75) 100%
+  ) !important;
   z-index: 10;
   padding: 0 1.5rem;
 }
 
 .hero-heading { 
-  font-size: clamp(2.6rem, 5vw, 4rem); 
+  font-size: clamp(2.6rem, 5.5vw, 4.5rem); 
   font-weight: 900; 
   color: #ffffff; 
   letter-spacing: -0.03em; 
   text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-  line-height: 1.1;
+  line-height: 1.15;
+  margin-bottom: 0.75rem;
 }
 
 .hero-badge {
@@ -65,7 +75,7 @@ body { background-color: #f7f5f0 !important; color: #1e293b; }
 }
 
 .hero-subtitle { 
-  max-width: 650px; 
+  max-width: 700px; 
   margin: 1.2rem auto 2rem auto; 
   color: #e2e8f0 !important; 
   font-size: 1.1rem; 
@@ -78,7 +88,7 @@ body { background-color: #f7f5f0 !important; color: #1e293b; }
 
 .hero-search-wrapper {
   position: relative; display: flex; align-items: stretch;
-  background-color: #f7f5f0; border-radius: 16px; padding: 0.35rem;
+  background-color: #f7f5f0; border-radius: 50px; padding: 0.35rem;
   box-shadow: 0 24px 48px rgba(4, 20, 14, 0.4); overflow: visible;
   border: 2px solid #ecc258;
 }
@@ -94,9 +104,9 @@ body { background-color: #f7f5f0 !important; color: #1e293b; }
 .hero-search-input::placeholder { color: #64748b; }
 
 .hero-search-button {
-  border: none; outline: none; border-radius: 12px;
+  border: none; outline: none; border-radius: 50px;
   padding: 0 2rem; display: flex; align-items: center; justify-content: center;
-  background: #ecc258; cursor: pointer; 
+  background:#facc15; cursor: pointer; 
   transition: all 0.2s cubic-bezier(0.19, 1, 0.22, 1);
 }
 .hero-search-button:hover { 
@@ -129,64 +139,6 @@ body { background-color: #f7f5f0 !important; color: #1e293b; }
   .hero-search-wrapper { border-radius: 14px; }
   .hero-search-input { padding: 0.8rem 1rem; }
   .hero-search-button { padding: 0 1.2rem; border-radius: 10px; }
-}
-
-/* ==========================================
-   PREMIUM ADVENTURE TRIP CARDS
-   ========================================== */
-.premium-card {
-  background: rgba(255, 255, 255, 0.65); /* Elegant semi-translucent layout style over matte canvas */
-  backdrop-filter: blur(4px);
-  cursor: pointer;
-  border: 1px solid rgba(6, 36, 25, 0.08); border-radius: 20px;
-  transition: all 0.35s cubic-bezier(0.19, 1, 0.22, 1);
-  display: flex; flex-direction: column; height: 100%;
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(6, 36, 25, 0.02);
-}
-.card-content { flex-grow: 1; display: flex; flex-direction: column; padding: 1.5rem; background: transparent; }
-.premium-card:hover { 
-  transform: translateY(-8px); 
-  box-shadow: 0 22px 40px rgba(6, 36, 25, 0.12); 
-  border-color: #ecc258;
-  background: #ffffff; /* Turns clean solid on card hover interaction */
-}
-
-.trek-card-image-wrapper {
-  position: relative; overflow: hidden; height: 240px; flex-shrink: 0;
-}
-.image-inner { position: absolute; inset: 0; }
-.image-inner img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1); }
-.premium-card:hover img { transform: scale(1.06); }
-
-/* Golden Ticket Cost Badge */
-.price-pill {
-  position: absolute; bottom: 16px; right: 16px;
-  background: #062419;
-  border: 1px solid rgba(236, 194, 88, 0.3);
-  color: #fff; padding: 6px 14px; border-radius: 10px;
-  box-shadow: 0 8px 20px rgba(0,0,0,.3);
-  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
-}
-.price-onwards { font-size: 8px; font-weight: 700; letter-spacing: 0.08em; color: #ecc258; text-transform: uppercase; }
-.price-value { font-size: 16px; font-weight: 800; color: #ffffff; line-height: 1.1; }
-
-.location-text { color: #062419; font-weight: 700; font-size: 1.15rem; letter-spacing: -0.3px; }
-.days { font-size: 13px; color: #475569; font-weight: 500; }
-
-.operator-grid-wrapper .d-flex { flex-wrap: wrap; gap: 6px; margin-top: auto; }
-.operator-badge-premium {
-  background-color: #fefbeb; 
-  color: #854d0e;
-  border: 1px solid #fef08a;
-  font-size: 0.72rem; font-weight: 600;
-  padding: 4px 10px; border-radius: 6px;
-  transition: all 0.2s ease;
-}
-.operator-badge-premium:hover { 
-  background-color: #062419; 
-  color: #ecc258; 
-  border-color: #ecc258;
 }
 
 /* ==========================================
@@ -282,4 +234,444 @@ body { background-color: #f7f5f0 !important; color: #1e293b; }
   background: #ecc258 !important; 
   color: #062419 !important; 
   border-color: #ecc258 !important; 
+}
+/* ==========================================================================
+   BOLT PLATFORM REFINED SLATE NAVY / GOLD CARD SYSTEM / Featured
+   ========================================================================== */
+
+.bolt-premium-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: 1rem;
+  border: 1px solid rgba(251, 191, 36, 0.15);
+  background-color: #1a2333; /* Soft rich slate color instead of dark pitch black */
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 500ms cubic-bezier(0.4, 0, 0.2, 1), border-color 500ms ease, box-shadow 500ms ease;
+}
+
+.bolt-premium-card:hover {
+  transform: translateY(-8px);
+  border-color: rgba(251, 191, 36, 0.6);
+  box-shadow: 0 12px 40px rgba(251, 191, 36, 0.15), 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+/* Shimmer top wire glow line */
+.bolt-top-glow {
+  position: absolute;
+  top: 0;
+  left: 2rem;
+  right: 2rem;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #fbbf24, transparent);
+  opacity: 0;
+  transition: opacity 500ms ease;
+  z-index: 10;
+}
+.bolt-premium-card:hover .bolt-top-glow {
+  opacity: 1;
+}
+
+/* Image Frames Layout */
+.bolt-image-wrapper {
+  position: relative;
+  height: 13rem;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.bolt-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 700ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.bolt-premium-card:hover .bolt-card-img {
+  transform: scale(1.08);
+}
+
+.bolt-image-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, #1a2333, rgba(0, 0, 0, 0.15), transparent);
+}
+.bolt-image-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top right, transparent, rgba(251, 191, 36, 0.08), transparent);
+  opacity: 0;
+  transition: opacity 500ms ease;
+}
+.bolt-premium-card:hover .bolt-image-shimmer {
+  opacity: 1;
+}
+
+/* Interactive Luxury Gold Price Badges */
+.bolt-price-badge {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  z-index: 10;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  text-align: right;
+  background: linear-gradient(to bottom right, #fbbf24, #d97706);
+  box-shadow: 0 8px 12px -3px rgba(251, 191, 36, 0.3);
+  transition: box-shadow 300ms ease;
+}
+.bolt-premium-card:hover .bolt-price-badge {
+  box-shadow: 0 10px 15px -3px rgba(251, 191, 36, 0.5);
+}
+.bolt-price-onwards {
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  margin: 0 0 0.125rem 0;
+}
+.bolt-price-value {
+  font-size: 17px;
+  font-weight: 900;
+  color: #000000;
+  line-height: 1;
+  margin: 0;
+}
+
+/* Card details text areas */
+.bolt-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
+  padding: 1rem;
+  padding-top: 0.75rem;
+  gap: 0.75rem;
+}
+.bolt-card-title {
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 15px;
+  line-height: 1.4;
+  margin: 0;
+  transition: color 300ms ease;
+}
+.bolt-premium-card:hover .bolt-card-title {
+  color: #fbbf24;
+}
+
+.bolt-location-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+.bolt-pin-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: #fbbf24;
+  flex-shrink: 0;
+}
+.bolt-location-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.bolt-card-divider {
+  height: 1px;
+  background: linear-gradient(to right, rgba(251, 191, 36, 0.2), rgba(255, 255, 255, 0.05), transparent);
+}
+
+/* Item details metadata */
+.bolt-specs-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.bolt-spec-item {
+  display: flex;
+  align-items: start;
+  gap: 0.5rem;
+}
+.bolt-spec-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: rgba(251, 191, 36, 0.7);
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+.bolt-spec-text {
+  font-size: 11px;
+  line-height: 1.625;
+}
+.bolt-spec-label {
+  font-weight: 600;
+  color: rgba(251, 191, 36, 0.8);
+}
+.bolt-spec-val {
+  color: #cbd5e1;
+}
+
+/* Footer structure items */
+.bolt-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+.bolt-partner-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  background-color: rgba(251, 191, 36, 0.03);
+  transition: all 300ms ease;
+}
+.bolt-premium-card:hover .bolt-partner-badge {
+  background-color: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.7);
+}
+.bolt-shield-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  color: #fbbf24;
+  flex-shrink: 0;
+}
+.bolt-partner-text {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fbbf24;
+  letter-spacing: 0.02em;
+}
+
+.bolt-arrow-circle {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  flex-shrink: 0;
+  transition: all 300ms ease;
+}
+.bolt-premium-card:hover .bolt-arrow-circle {
+  opacity: 1;
+  border-color: rgba(251, 191, 36, 0.7);
+  background-color: rgba(251, 191, 36, 0.1);
+}
+.bolt-arrow-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: #fbbf24;
+}
+
+/* Arrow Navigation Strip layout */
+.bolt-pagination-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.bolt-pag-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #9ca3af !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 200ms ease;
+  text-decoration: none !important;
+  user-select: none;
+}
+.bolt-pag-btn:hover {
+  color: #fbbf24 !important;
+  background-color: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+.bolt-pag-active {
+  background-color: #fbbf24 !important;
+  color: #000000 !important;
+  border-color: #fbbf24 !important;
+  box-shadow: 0 4px 6px -1px rgba(251, 191, 36, 0.3);
+}
+.bolt-pag-disabled {
+  opacity: 0.2;
+  pointer-events: none;
+}
+.bolt-pag-ellipsis {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: #4b5563;
+}
+/* ==========================================
+   TRAVEL YOUR WAY — PAGE HEADER AND STYLES
+   ========================================== */
+/* ==========================================
+   TRAVEL YOUR WAY — PAGE HEADER
+   ========================================== */
+.tyw-page-header {
+  padding-top: clamp(5.5rem, 12vw, 7rem);
+  padding-bottom: 2.5rem;
+  background-color: #0d1520;
+  border-bottom: 1px solid rgba(251, 191, 36, 0.12);
+}
+
+.tyw-back-link {
+  display: inline-block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(251, 191, 36, 0.7);
+  text-decoration: none;
+  margin-bottom: 1.5rem;
+  transition: color 200ms ease;
+}
+.tyw-back-link:hover { color: #fbbf24; }
+
+.tyw-page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+.tyw-page-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+.tyw-page-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #fbbf24;
+  margin: 0 0 0.25rem 0;
+}
+.tyw-page-heading {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: -0.03em;
+  margin: 0;
+  line-height: 1.1;
+}
+.tyw-page-subtitle {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 1rem;
+  margin: 0.75rem 0 1.5rem 0;
+  max-width: 560px;
+}
+
+/* Category pill switcher */
+.tyw-tag-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.tyw-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  transition: all 200ms ease;
+}
+.tyw-tag-pill:hover {
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.06);
+}
+.tyw-tag-pill--active {
+  color: #000000 !important;
+  background: #fbbf24 !important;
+  border-color: #fbbf24 !important;
+}
+
+@media (max-width: 767.98px) {
+  .tyw-page-title-row { gap: 0.75rem; }
+  .tyw-page-icon { font-size: 2rem; }
+  .tyw-tag-switcher { gap: 0.4rem; }
+  .tyw-tag-pill { font-size: 0.75rem; padding: 0.35rem 0.8rem; }
+}
+
+/* ==========================================
+   BOLT SKELETON LOADING CARDS
+   ========================================== */
+@keyframes bolt-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+.bolt-skeleton-card {
+  border-radius: 1rem;
+  border: 1px solid rgba(251, 191, 36, 0.08);
+  background-color: #1a2333;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.bolt-skeleton-img {
+  height: 13rem;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, #1e2d42 25%, #243450 50%, #1e2d42 75%);
+  background-size: 800px 100%;
+  animation: bolt-shimmer 1.4s ease-in-out infinite;
+}
+
+.bolt-skeleton-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  flex: 1;
+}
+
+.bolt-skeleton-line {
+  border-radius: 6px;
+  background: linear-gradient(90deg, #1e2d42 25%, #243450 50%, #1e2d42 75%);
+  background-size: 800px 100%;
+  animation: bolt-shimmer 1.4s ease-in-out infinite;
+}
+.bolt-skeleton-line--title  { height: 14px; width: 75%; }
+.bolt-skeleton-line--short  { height: 10px; width: 45%; }
+.bolt-skeleton-line--med    { height: 10px; width: 60%; }
+
+.bolt-skeleton-divider {
+  height: 1px;
+  background: rgba(251, 191, 36, 0.08);
+  margin: 0.2rem 0;
+}
+
+.bolt-skeleton-footer {
+  margin-top: auto;
+  height: 28px;
+  border-radius: 999px;
+  width: 70%;
+  background: linear-gradient(90deg, #1e2d42 25%, #243450 50%, #1e2d42 75%);
+  background-size: 800px 100%;
+  animation: bolt-shimmer 1.4s ease-in-out infinite;
 }

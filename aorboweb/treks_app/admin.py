@@ -4,10 +4,12 @@ from django.db.models import Count
 from django.utils import timezone
 from datetime import timedelta
 from django.utils.safestring import mark_safe
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 import supabase
 from django import forms
-import json
 
+import json
 
 admin.site.site_header = "Aorbo Treks Admin"
 admin.site.site_title = "Aorbo Treks Admin Pannel"
@@ -17,7 +19,7 @@ from .models import (
     Contact, Blog, TrekCategory, TrekOrganizer, Trek, TrekImage,
     Testimonial, FAQ, SafetyTip, TeamMember, HomepageBanner,
     SocialMedia, ContactInfo, TrekList, Visitor,
-    TermsAndConditions, Operator, Tag, TrekPoint
+    TermsAndConditions, Operator, Tag, TrekPoint, SearchLog
 )
 
 
@@ -372,5 +374,101 @@ class TagAdmin(admin.ModelAdmin):
 
 @admin.register(TrekPoint)
 class TrekPointAdmin(admin.ModelAdmin):
-    list_display  = ('name',)
+    list_display = ('name',)
     search_fields = ('name',)
+
+
+@admin.register(SearchLog)
+class SearchLogAdmin(admin.ModelAdmin):
+    list_display = ('query', 'tag', 'trek', 'ip_address', 'searched_at')
+    list_filter = ('tag',)
+    search_fields = ('query', 'tag')
+    readonly_fields = ('query', 'tag', 'trek', 'ip_address', 'searched_at')
+    ordering = ('-searched_at',)
+    change_list_template = "admin/searchlog_changelist.html"
+
+    def get_queryset(self, request):
+        """
+        Filters data dynamically using our custom session-safe period parameter
+        without crashing Django Admin's validation loop.
+        """
+        qs = super().get_queryset(request)
+
+        period = request.GET.get('period') or getattr(self, '_current_period', '30days')
+        now = timezone.now()
+
+        if period == 'today':
+            qs = qs.filter(searched_at__date=timezone.localdate())
+        elif period == '7days':
+            qs = qs.filter(searched_at__gte=now - timedelta(days=7))
+        elif period == '30days':
+            qs = qs.filter(searched_at__gte=now - timedelta(days=30))
+        elif period == 'year':
+            qs = qs.filter(searched_at__year=now.year)
+
+        return qs
+
+    def changelist_view(self, request, extra_context=None):
+        period = request.GET.get('period', '30days')
+        self._current_period = period
+
+        qs = self.get_queryset(request)
+        total_searches = qs.count()
+
+        top_treks_chart_qs = list(
+            qs.exclude(trek=None)
+            .values('trek__name')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:8]
+        )
+
+        top_tags_qs = list(
+            qs.exclude(tag='')
+            .values('tag')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+
+        top_treks_qs = list(
+            qs.exclude(trek=None)
+            .values('trek__name')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:1]
+        )
+
+        top_queries_qs = list(
+            qs.exclude(query='')
+            .values('query')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:1]
+        )
+
+        top_query = top_queries_qs[0]['query'] if top_queries_qs else '-'
+        top_query_count = top_queries_qs[0]['count'] if top_queries_qs else 0
+        top_tag = top_tags_qs[0]['tag'] if top_tags_qs else '-'
+        top_tag_count = top_tags_qs[0]['count'] if top_tags_qs else 0
+        top_trek = top_treks_qs[0]['trek__name'] if top_treks_qs else '-'
+        top_trek_count = top_treks_qs[0]['count'] if top_treks_qs else 0
+
+        extra = {
+            'period': period,
+            'total_searches': total_searches,
+            'top_query': top_query,
+            'top_query_count': top_query_count,
+            'top_tag': top_tag,
+            'top_tag_count': top_tag_count,
+            'top_trek': top_trek,
+            'top_trek_count': top_trek_count,
+            'top_queries_labels': json.dumps([t['trek__name'] for t in top_treks_chart_qs]),
+            'top_queries_data': json.dumps([t['count'] for t in top_treks_chart_qs]),
+            'top_tags_labels': json.dumps([t['tag'] for t in top_tags_qs]),
+            'top_tags_data': json.dumps([t['count'] for t in top_tags_qs]),
+        }
+
+        extra_context = {**(extra_context or {}), **extra}
+
+        request.GET = request.GET.copy()
+        if 'period' in request.GET:
+            request.GET.pop('period')
+
+        return super().changelist_view(request, extra_context=extra_context)
