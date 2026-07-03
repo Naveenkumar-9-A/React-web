@@ -540,22 +540,22 @@ def api_featured_treks(request):
 
     
 
-if hasattr(item, 'images') and item.images.exists():
-    first_image = item.images.first()
+    if hasattr(item, 'images') and item.images.exists():
+        first_image = item.images.first()
     if hasattr(first_image, 'image_url') and first_image.image_url:
         img_url = str(first_image.image_url)
-elif hasattr(item, 'main_image') and item.main_image:
-    img_url = item.main_image.url
+    elif hasattr(item, 'main_image') and item.main_image:
+        img_url = item.main_image.url
 
-operators_list = []
-if hasattr(item, 'operators_list') and item.operators_list:
-    operators_list = [
+    operators_list = []
+    if hasattr(item, 'operators_list') and item.operators_list:
+        operators_list = [
         op.strip()
         for op in item.operators_list.split(',')
         if op.strip()
     ]
-else:
-    operators_list = ["Aorbo Certified Partner"]
+    else:
+        operators_list = ["Aorbo Certified Partner"]
 
         results.append({
             "id": item.id,
