@@ -1,4 +1,4 @@
-
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.shortcuts import render, get_object_or_404, redirect
@@ -10,14 +10,15 @@ from django.template.loader import render_to_string
 from django.db.models import Q, Case, When, IntegerField
 from django.conf import settings
 from django.core.cache import cache
-from datetime import datetime
+from django.utils import timezone as dj_timezone
+from datetime import datetime, timezone, timedelta
 import difflib
 import threading
 
 from .models import (
     Contact, Blog, TrekCategory, Trek, 
     Testimonial, FAQ, SafetyTip, TeamMember,
-    HomepageBanner, TrekList
+    HomepageBanner, TrekList, SearchLog
 )
 
 def send_email_async(mail):
@@ -144,8 +145,13 @@ def search_trek(request):
 def search_suggestions(request):
     query = request.GET.get("q", "").strip()
 
+    # To this — only log if query is 4+ characters
     if len(query) < 2:
         return JsonResponse({"results": []})
+
+    # if len(query) >= 4:
+    #     SearchLog.objects.create(query=query, ip_address=request.META.get('REMOTE_ADDR'))
+
 
     # Cache search suggestions for 30 minutes
     query_n = normalize_text(query)
@@ -464,21 +470,36 @@ def user_agreement(request):
 
 @api_view(['GET'])
 def api_featured_treks(request):
-    """
-    Optimized JSON endpoint using Django's core memory caching layer
-    to deliver instant performance to your React frontend.
-    """
     selected_tag = request.GET.get('tag', '').strip()
     search_query = request.GET.get('q', '').strip()
     page_number = request.GET.get('page', 1)
 
+    # ✅ Log search
+    if str(page_number) == '1' and (selected_tag or search_query):
+        SearchLog.objects.create(
+            query=search_query,
+            tag=selected_tag,
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
     cache_key = f"api_home_page_{page_number}_{selected_tag}_{search_query}"
     cached_response = cache.get(cache_key)
-
     if cached_response:
         return Response(cached_response)
 
-    queryset = get_featured_treks()
+    # ✅ Build fresh queryset with images prefetched
+    queryset = (
+        TrekList.objects
+        .prefetch_related('images', 'tags')
+        .annotate(
+            pin_order=Case(
+                When(is_pinned=True, then=0),
+                default=1,
+                output_field=IntegerField()
+            )
+        )
+        .order_by('pin_order', 'pin_priority', '-created_at')
+    )
 
     if selected_tag:
         queryset = queryset.filter(tags__name__iexact=selected_tag).distinct()
@@ -497,28 +518,27 @@ def api_featured_treks(request):
 
     results = []
     for item in page_obj:
+        # ✅ Clean simple image logic
         img_url = ""
-        if hasattr(item, 'images') and item.images.exists():
-            first_image = item.images.first()
-            if hasattr(first_image, 'image_url') and first_image.image_url:
-                img_url = first_image.image_url.url if hasattr(first_image.image_url, 'url') else str(first_image.image_url)
-        elif hasattr(item, 'main_image') and item.main_image:
-            img_url = item.main_image.url
-
-        operators_list = []
-        if hasattr(item, 'operators_list') and item.operators_list:
-            operators_list = [op.strip() for op in item.operators_list.split(',')]
-        else:
+        images = item.images.all()
+        if images:
+            first = images[0]
+            if first.image_url:
+                img_url = str(first.image_url).rstrip('?')
+        if not img_url and item.image and 'example.com' not in str(item.image):
+            img_url = str(item.image).rstrip('?')
+        operators_list = list(item.operators.values_list('name', flat=True))
+        if not operators_list:
             operators_list = ["Aorbo Certified Partner"]
 
         results.append({
             "id": item.id,
-            "slug": item.slug if hasattr(item, 'slug') and item.slug else str(item.id), # 🚀 ADDED: Passes the true slug text to React
+            "slug": str(item.id),
             "name": item.name,
             "state": item.state,
-            "price_start": item.price_start if hasattr(item, 'price_start') else "N/A",
-            "duration_days": item.duration_days if hasattr(item, 'duration_days') else "3D/2N",
-            "operating_days": item.operating_days if hasattr(item, 'operating_days') else "THU, FRI, SAT",
+            "price_start": item.price_start if item.price_start else "N/A",
+            "duration_days": item.duration_days if item.duration_days else "3D/2N",
+            "operating_days": item.operating_days if item.operating_days else "THU, FRI, SAT",
             "images": [{"image_url": img_url}] if img_url else [],
             "operators": operators_list
         })
@@ -530,7 +550,6 @@ def api_featured_treks(request):
 
     cache.set(cache_key, response_data, 60 * 10)
     return Response(response_data)
-
 
 @api_view(['GET'])
 def api_trek_detail(request, slug):
@@ -592,6 +611,8 @@ def api_search_suggestions(request):
     if len(query) < 2:
         return Response([])
 
+    # if len(query) >= 4:
+    #     SearchLog.objects.create(query=query, ip_address=request.META.get('REMOTE_ADDR'))
     # Query matching against TrekList records 
     treks = TrekList.objects.filter(name__icontains=query).only("id", "name", "state")[:8]
     
@@ -603,6 +624,43 @@ def api_search_suggestions(request):
             "state": t.state
         })
     return Response(results)
+@csrf_exempt
+@api_view(['POST'])
+def api_log_trek_click(request):
+    trek_id = request.data.get('trek_id', '')
+    query = request.data.get('query', '')
+    tag = request.data.get('tag', '')
+
+    trek = None
+    if trek_id:
+        try:
+            trek = TrekList.objects.get(id=trek_id)
+        except TrekList.DoesNotExist:
+            pass
+
+    SearchLog.objects.create(
+        query=query,
+        tag=tag,
+        trek=trek,
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+    return Response({"status": "logged"})
+@api_view(['GET'])
+def api_analytics(request):
+    period = request.GET.get('period', '30days')
+    qs = SearchLog.objects.all()
+    now = dj_timezone.now()
+
+    if period == 'today':
+        qs = qs.filter(searched_at__date=now.date())
+    elif period == '7days':
+        qs = qs.filter(searched_at__gte=now - timedelta(days=7))
+    elif period == '30days':
+        qs = qs.filter(searched_at__gte=now - timedelta(days=30))
+    elif period == 'year':
+        qs = qs.filter(searched_at__year=now.year)
+
+    return Response({'total_searches': qs.count()})
 
 @api_view(['GET'])
 def api_travel_your_way(request):
@@ -648,6 +706,7 @@ def api_travel_your_way(request):
     # 3. Save the serialized data to your cache for 10 minutes (matching your home template)
     cache.set(cache_key, {"results": results, "total_pages": paginator.num_pages}, 60 * 10)
     return Response({"results": results, "total_pages": paginator.num_pages})
+
 @api_view(['GET'])
 def api_blogs_list(request):
     page_number = request.GET.get('page', 1)

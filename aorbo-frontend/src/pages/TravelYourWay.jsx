@@ -117,6 +117,17 @@ export default function TravelYourWay() {
     if (currentPage >= totalPages - 2) return [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
     return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
   };
+  const handleTrekClick = (trek) => {
+    fetch(`${BACKEND_URL}/api/treks/log-click/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            trek_id: trek.id, 
+            query: '',
+            tag: selectedTag
+        })
+    });
+  };
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
@@ -187,7 +198,7 @@ export default function TravelYourWay() {
 
                   return (
                     <div key={trek.id} className="col-12 col-sm-6 col-md-4 col-lg-3">
-                      <Link to={`/treks/${trek.id}`} className="text-decoration-none d-block h-100">
+                      <Link to={`/treks/${trek.id}`} className="text-decoration-none d-block h-100" onClick={() => handleTrekClick(trek)}>
                         <div className="bolt-premium-card">
                           <div className="bolt-shine" />
                           <div className="bolt-top-glow" />

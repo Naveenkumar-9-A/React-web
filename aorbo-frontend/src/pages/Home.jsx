@@ -134,34 +134,72 @@ export default function Home() {
     }
   };
 
-  const handleSearchInput = async (e) => {
+  const debounceRef = useRef(null);
+
+const handleSearchInput = async (e) => {
     const val = e.target.value;
     setSearchQuery(val);
-    if (val.length < 2) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/treks/search/?q=${val}`);
-      const data = await res.json();
-      setSuggestions(data);
-      setShowSuggestions(true);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
-  const handleSearchSubmit = (e) => {
+    if (val.length < 2) {
+        setSuggestions([]);
+        setShowSuggestions(false);
+        clearTimeout(debounceRef.current);
+        return;
+    }
+
+    // ✅ Wait 500ms after user stops typing — then fire ONE request
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+        try {
+            const res = await fetch(`${BACKEND_URL}/api/treks/search/?q=${val}`);
+            const data = await res.json();
+            setSuggestions(data);
+            setShowSuggestions(true);
+        } catch (err) {
+            console.error(err);
+        }
+    }, 500);
+};
+
+ const handleSearchSubmit = (e) => {
     e.preventDefault();
+    if (!searchQuery.trim()) return;
+
+    // If there's a suggestion match, go to first suggestion
+    if (suggestions.length > 0) {
+        const first = suggestions[0];
+        fetch(`${BACKEND_URL}/api/treks/log-click/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ trek_id: first.id, query: searchQuery })
+        });
+        navigate(`/treks/${first.id}`);
+        setShowSuggestions(false);
+        return;
+    }
+
+    // If no suggestions, go to travel-your-way as fallback
     navigate(`/travel-your-way?q=${searchQuery}`);
-  };
+};
 
   const handleSuggestionClick = (trek) => {
+    // ✅ Log the trek click
+    fetch(`${BACKEND_URL}/api/treks/log-click/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trek_id: trek.id, query: searchQuery })
+    });
+
     navigate(`/treks/${trek.id}`);
     setShowSuggestions(false);
-  };
-
+};
+const handleTagClick = (tag) => {
+    fetch(`${BACKEND_URL}/api/treks/log-click/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: '', tag: tag })
+    });
+};
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (suggestionRef.current && !suggestionRef.current.contains(e.target)) {
@@ -301,7 +339,15 @@ export default function Home() {
                     key={trek.id}
                     className={`col-12 col-sm-6 col-md-4 col-lg-3 ${index >= 8 ? 'extra-trek-card d-none' : ''}`}
                   >
-                    <Link to={`/treks/${trek.id}`} className="text-decoration-none d-block h-100">
+                    <Link to={`/treks/${trek.id}`}  className="text-decoration-none d-block h-100"
+                    onClick={() => {
+                         fetch(`${BACKEND_URL}/api/treks/log-click/`, {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ trek_id: trek.id, query: '', tag: selectedTag || '' })
+                    });
+                    }}
+                  >
                       <div className="bolt-premium-card">
                         
                         {/* Glow and Shimmer Lines */}
@@ -434,7 +480,7 @@ export default function Home() {
               { tag: 'camping', icon: '🏕️', title: 'Camping & Bonfire', text: 'Experience starlit nights and warm bonfires in the wild.', iconClass: 'icon-camping' },
             ].map(({ tag, icon, title, text, iconClass }) => (
               <div key={tag} className="col-12 col-md-6 col-lg-4 d-flex">
-                <Link to={`/travel-your-way?tag=${tag}`} className="tyw-card-link w-100">
+                <Link to={`/travel-your-way?tag=${tag}`} className="tyw-card-link w-100" onClick={() => handleTagClick(tag)}>
                   <div className="tyw-card">
                     <div className={`tyw-icon ${iconClass}`}>{icon}</div>
                     <h3 className="tyw-card-title">{title}</h3>
