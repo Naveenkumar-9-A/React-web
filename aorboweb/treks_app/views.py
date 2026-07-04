@@ -1,4 +1,3 @@
-
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.shortcuts import render, get_object_or_404, redirect
@@ -530,7 +529,7 @@ def api_featured_treks(request):
                 Q(tags__name__icontains=cleaned)
             ).distinct()
 
-    paginator = Paginator(queryset, 12)  # 12 items per page
+    paginator = Paginator(queryset, 8)  # 8 items per page
     page_obj = paginator.get_page(page_number)
 
     results = []
@@ -538,24 +537,22 @@ def api_featured_treks(request):
         # ✅ Clean simple image logic
         img_url = ""
 
-    
+        if hasattr(item, 'images') and item.images.exists():
+            first_image = item.images.first()
+            if hasattr(first_image, 'image_url') and first_image.image_url:
+                img_url = str(first_image.image_url)
+        elif hasattr(item, 'main_image') and item.main_image:
+            img_url = item.main_image.url
 
-    if hasattr(item, 'images') and item.images.exists():
-        first_image = item.images.first()
-    if hasattr(first_image, 'image_url') and first_image.image_url:
-        img_url = str(first_image.image_url)
-    elif hasattr(item, 'main_image') and item.main_image:
-        img_url = item.main_image.url
-
-    operators_list = []
-    if hasattr(item, 'operators_list') and item.operators_list:
-        operators_list = [
-        op.strip()
-        for op in item.operators_list.split(',')
-        if op.strip()
-    ]
-    else:
-        operators_list = ["Aorbo Certified Partner"]
+        operators_list = []
+        if hasattr(item, 'operators_list') and item.operators_list:
+            operators_list = [
+                op.strip()
+                for op in item.operators_list.split(',')
+                if op.strip()
+            ]
+        else:
+            operators_list = ["Aorbo Certified Partner"]
 
         results.append({
             "id": item.id,
@@ -567,15 +564,14 @@ def api_featured_treks(request):
             "operating_days": item.operating_days if item.operating_days else "THU, FRI, SAT",
             "images": [{"image_url": img_url}] if img_url else [],
             "operators": operators_list,
-            "latitude": item.latitude,  # 🗺️ NEW: Map coordinates
-            "longitude": item.longitude  # 🗺️ NEW: Map coordinates
+            "latitude": item.latitude,
+            "longitude": item.longitude,
         })
 
     response_data = {
         "results": results,
-        "total_pages": paginator.num_pages
+        "total_pages": paginator.num_pages,
     }
-
     cache.set(cache_key, response_data, 60 * 10)
     return Response(response_data)
 

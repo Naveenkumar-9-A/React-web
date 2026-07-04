@@ -494,9 +494,13 @@ body { background-color: #f7f5f0 !important; color: #1e293b; }
   font-weight: 600;
   color: #9ca3af !important;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
   transition: all 200ms ease;
   text-decoration: none !important;
   user-select: none;
+
 }
 .bolt-pag-btn:hover {
   color: #fbbf24 !important;

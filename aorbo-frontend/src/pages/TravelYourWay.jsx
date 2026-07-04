@@ -202,7 +202,7 @@ export default function TravelYourWay() {
             /* ── REAL CARDS ── */
             <>
               <div className="row g-4">
-                {paginatedTreks.map((trek) => {
+                {treks.map((trek) => {
                   const resolvedImageUrl =
                     trek.images && trek.images[0] && trek.images[0].image_url
                       ? trek.images[0].image_url.startsWith('http')
