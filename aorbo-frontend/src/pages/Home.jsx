@@ -435,7 +435,7 @@ const handleMapMarkerClickWithNav = (trek) => {
                       Destination Details
                     </h4>
                     {osmResults.map((destination) => (
-                      <DestinationCard key={destination.id} destination={destination} />
+                      <DestinationCard key={destination.id} destination={destination} searchQuery={searchQuery} />
                     ))}
                   </div>
                 )}

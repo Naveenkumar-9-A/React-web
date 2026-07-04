@@ -2,10 +2,11 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, ExternalLink, Mountain, Leaf, Calendar, AlertCircle } from 'lucide-react';
 
-export default function DestinationCard({ destination }) {
+export default function DestinationCard({ destination, searchQuery = '' }) {
   if (!destination) return null;
 
   const navigate = useNavigate();
+  const BACKEND_URL = 'http://127.0.0.1:8000';
 
   const {
     name,
@@ -28,6 +29,16 @@ export default function DestinationCard({ destination }) {
 
   // Handle click to navigate to TrekDetails with OSM destination data
   const handleViewDetails = () => {
+    fetch(`${BACKEND_URL}/api/treks/log-click/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        trek_id: '',
+        query: searchQuery || destination.name,
+        tag: '',
+      }),
+    }).catch(() => {});
+
     navigate('/treks/osm-destination', { 
       state: { destination } 
     });
