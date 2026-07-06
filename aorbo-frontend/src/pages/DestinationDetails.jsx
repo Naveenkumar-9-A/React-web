@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { slugToName } from '../utils/slugUtils';
 
 export default function DestinationDetails() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [destination, setDestination] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,20 +18,41 @@ export default function DestinationDetails() {
         setLoading(true);
         setError(null);
 
-        // Decode the slug to get the destination name
-        const destinationName = slugToName(slug);
+        const passedDestination = location.state?.destination;
+        const destinationName = passedDestination?.name || slugToName(slug);
+        const lat = passedDestination?.lat;
+        const lon = passedDestination?.lon;
+        const display_name = passedDestination?.display_name;
 
-        // Fetch enrichment data from backend
-        const res = await fetch(
-          `${BACKEND_URL}/api/enrich-destination/?name=${encodeURIComponent(destinationName)}`
-        );
+        let url = `${BACKEND_URL}/api/enrich-destination/?name=${encodeURIComponent(destinationName)}`;
+        if (lat != null) url += `&lat=${lat}`;
+        if (lon != null) url += `&lon=${lon}`;
+        if (display_name) url += `&display_name=${encodeURIComponent(display_name)}`;
 
+        const res = await fetch(url);
         if (!res.ok) throw new Error('Destination not found');
 
         const data = await res.json();
+        
+        // Safely extract the enrichment block with fallback defaults
+        const enrich = data.enrichment || {};
+
         setDestination({
-          name: data.destination,
-          ...data.enrichment
+          name: data.destination || destinationName,
+          lat: lat || data.lat,
+          lon: lon || data.lon,
+          display_name: display_name || data.display_name,
+          summary: enrich.summary || enrich.description || 'Explore this beautiful destination.',
+          category: enrich.category || 'Adventure',
+          difficulty: enrich.difficulty || 'moderate',
+          best_time_to_visit: enrich.best_time_to_visit || 'October to March',
+          activities: enrich.activities || [],
+          travel_tips: enrich.travel_tips || [],
+          nearby_attractions: enrich.nearby_attractions || enrich.famous_places || [],
+          accommodation: enrich.accommodation,
+          local_cuisine: enrich.local_cuisine,
+          altitude: enrich.altitude,
+          distance_from_major_city: enrich.distance_from_major_city
         });
       } catch (err) {
         console.error('Failed fetching destination details:', err);
@@ -40,10 +62,10 @@ export default function DestinationDetails() {
       }
     }
 
-    if (slug) {
+    if (slug || location.state?.destination) {
       getDestinationDetails();
     }
-  }, [slug]);
+  }, [slug, location.state]);
 
   if (loading) {
     return (
@@ -75,7 +97,7 @@ export default function DestinationDetails() {
     );
   }
 
-  // Theme colors - IDENTICAL to CardDetails.jsx
+  // Theme colors
   const yellow = '#FFE100';
   const yellowLight = '#FFF8C0';
   const yellowBorder = '#F5D800';
@@ -83,8 +105,6 @@ export default function DestinationDetails() {
   const orange = '#ff6a1a';
   const pageBg = '#FFFDF0';
 
-  // ✅ PHASE 2: Generate estimated package prices based on difficulty
-  // Minimum ₹1000 - NEVER display below this
   const getEstimatedPrice = () => {
     const diff = destination.difficulty?.toLowerCase() || 'easy';
     const prices = {
@@ -93,7 +113,7 @@ export default function DestinationDetails() {
       'difficult': 2500,
       'very difficult': 4000
     };
-    return Math.max(prices[diff] || 1000, 1000); // Ensure minimum ₹1000
+    return Math.max(prices[diff] || 1000, 1000);
   };
 
   const estimatedPrice = getEstimatedPrice();
@@ -101,13 +121,11 @@ export default function DestinationDetails() {
   return (
     <main style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', maxWidth: '1200px', margin: '0 auto', padding: '1.5rem 1rem 4rem', background: pageBg, minHeight: '100vh' }}>
 
-      {/* ✅ PHASE 2: HERO SECTION - IDENTICAL DESIGN TO TREK DETAILS */}
+      {/* HERO SECTION */}
       <div style={{ position: 'relative', borderRadius: '20px', overflow: 'hidden', marginBottom: '1.5rem', minHeight: '320px', background: darkGreen }}>
-        {/* Gradient background instead of image */}
         <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${darkGreen} 0%, #2d5a2d 100%)` }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,20,10,0.92) 0%, rgba(10,20,10,0.3) 60%, transparent 100%)' }} />
 
-        {/* BACK BUTTON */}
         <button
           onClick={() => navigate(-1)}
           style={{ position: 'absolute', top: '1.25rem', left: '1.25rem', background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.25)', color: '#fff', borderRadius: '999px', padding: '7px 18px', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', zIndex: 10 }}
@@ -115,7 +133,6 @@ export default function DestinationDetails() {
           ← Back
         </button>
 
-        {/* ✅ PHASE 2: HERO CONTENT - Destination name, State, Country, Price, Book Now */}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '1.5rem 2rem' }}>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
             {destination.category && (
@@ -144,23 +161,39 @@ export default function DestinationDetails() {
         </div>
       </div>
 
-      {/* ✅ PHASE 2: MAIN CONTENT GRID - IDENTICAL TO TREK DETAILS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,2fr) minmax(0,1fr)', gap: '1.25rem', alignItems: 'start' }}>
+      {/* DESTINATION LOCATION MAP */}
+      {!isNaN(parseFloat(destination.lat)) && !isNaN(parseFloat(destination.lon)) && (() => {
+        const lat = parseFloat(destination.lat);
+        const lon = parseFloat(destination.lon);
+        return (
+          <div style={{ borderRadius: '16px', overflow: 'hidden', marginBottom: '1.5rem', border: `1px solid ${yellowBorder}` }}>
+            <iframe
+              title="Destination location map"
+              width="100%"
+              height="320"
+              style={{ border: 0, display: 'block' }}
+              src={`https://www.openstreetmap.org/export/embed.html?bbox=${lon - 0.05}%2C${lat - 0.05}%2C${lon + 0.05}%2C${lat + 0.05}&layer=mapnik&marker=${lat}%2C${lon}`}
+            />
+          </div>
+        );
+      })()}
 
+      {/* MAIN CONTENT GRID */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,2fr) minmax(0,1fr)', gap: '1.25rem', alignItems: 'start' }}>
+        
         {/* LEFT COLUMN */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-
           {/* ABOUT DESTINATION */}
           <div style={{ background: yellowLight, border: `1px solid ${yellowBorder}`, borderRadius: '16px', padding: '1.5rem' }}>
             <h2 style={{ fontSize: '1.1rem', fontWeight: '700', margin: '0 0 0.75rem', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ color: orange }}>📖</span> About this Destination
             </h2>
             <p style={{ color: '#374151', lineHeight: '1.8', fontSize: '0.98rem', margin: 0 }}>
-              {destination.summary || 'Explore this beautiful destination.'}
+              {destination.summary}
             </p>
           </div>
 
-          {/* ✅ PHASE 2: ACTIVITIES */}
+          {/* ACTIVITIES */}
           {destination.activities?.length > 0 && (
             <div style={{ background: yellowLight, border: `1px solid ${yellowBorder}`, borderRadius: '16px', padding: '1.5rem' }}>
               <h2 style={{ fontSize: '1.1rem', fontWeight: '700', margin: '0 0 1rem', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -176,7 +209,7 @@ export default function DestinationDetails() {
             </div>
           )}
 
-          {/* ✅ PHASE 2: TRAVEL TIPS */}
+          {/* TRAVEL TIPS */}
           {destination.travel_tips?.length > 0 && (
             <div style={{ background: yellowLight, border: `1px solid ${yellowBorder}`, borderRadius: '16px', padding: '1.5rem' }}>
               <h2 style={{ fontSize: '1.1rem', fontWeight: '700', margin: '0 0 1rem', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -192,7 +225,7 @@ export default function DestinationDetails() {
             </div>
           )}
 
-          {/* ✅ PHASE 2: NEARBY ATTRACTIONS */}
+          {/* NEARBY ATTRACTIONS */}
           {destination.nearby_attractions?.length > 0 && (
             <div style={{ background: yellowLight, border: `1px solid ${yellowBorder}`, borderRadius: '16px', padding: '1.5rem' }}>
               <h2 style={{ fontSize: '1.1rem', fontWeight: '700', margin: '0 0 1rem', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -211,17 +244,15 @@ export default function DestinationDetails() {
 
         {/* RIGHT COLUMN */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-
-          {/* ✅ PHASE 2: PRICE CARD - IDENTICAL TO TREK DETAILS */}
+          {/* PRICE CARD */}
           <div style={{ background: darkGreen, borderRadius: '16px', padding: '1.5rem', color: '#fff' }}>
             <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', margin: '0 0 0.25rem' }}>Estimated Package Price</p>
             <p style={{ fontSize: '2rem', fontWeight: '700', color: yellow, margin: '0 0 0.25rem', lineHeight: 1 }}>₹{estimatedPrice}</p>
             <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', margin: '0 0 1.25rem' }}>per person onwards*</p>
             
-            {/* ✅ PHASE 2: BOOK NOW BUTTON */}
             <button
               onClick={() => {
-                alert(`Starting a trek adventure to ${destination.name} for ₹${estimatedPrice}. Coming soon: Integration with booking system!`);
+                alert(`Starting an adventure to ${destination.name} for ₹${estimatedPrice}. Coming soon!`);
               }}
               style={{
                 width: '100%',
@@ -237,82 +268,60 @@ export default function DestinationDetails() {
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px'
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#F5D800'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = yellow; e.currentTarget.style.transform = 'translateY(0)'; }}
             >
               📋 Book Now
             </button>
           </div>
 
-          {/* ✅ PHASE 2: TRIP INFORMATION */}
+          {/* TRIP INFORMATION */}
           <div style={{ background: yellowLight, border: `1px solid ${yellowBorder}`, borderRadius: '16px', padding: '1.25rem' }}>
             <h3 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 1rem', color: '#111827' }}>Trip Information</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
-              {destination.difficulty && (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#6b7280' }}>⛰️ Difficulty Level</span>
-                    <span style={{ fontWeight: '600', color: '#111827', textTransform: 'capitalize' }}>{destination.difficulty}</span>
-                  </div>
-                  <div style={{ borderTop: `1px solid ${yellowBorder}` }} />
-                </>
-              )}
-              {destination.best_time_to_visit && (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#6b7280' }}>📅 Best Time to Visit</span>
-                    <span style={{ fontWeight: '600', color: '#111827' }}>{destination.best_time_to_visit}</span>
-                  </div>
-                  <div style={{ borderTop: `1px solid ${yellowBorder}` }} />
-                </>
-              )}
-              {destination.category && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: '#6b7280' }}>🏷️ Adventure Category</span>
-                  <span style={{ fontWeight: '600', color: '#111827', textTransform: 'capitalize' }}>{destination.category}</span>
-                </div>
-              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#6b7280' }}>⛰️ Difficulty Level</span>
+                <span style={{ fontWeight: '600', color: '#111827', textTransform: 'capitalize' }}>{destination.difficulty}</span>
+              </div>
+              <div style={{ borderTop: `1px solid ${yellowBorder}` }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#6b7280' }}>📅 Best Time to Visit</span>
+                <span style={{ fontWeight: '600', color: '#111827' }}>{destination.best_time_to_visit}</span>
+              </div>
+              <div style={{ borderTop: `1px solid ${yellowBorder}` }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#6b7280' }}>🏷️ Category</span>
+                <span style={{ fontWeight: '600', color: '#111827', textTransform: 'capitalize' }}>{destination.category}</span>
+              </div>
             </div>
           </div>
 
-          {/* ✅ PHASE 2: PRICE RULES */}
+          {/* PRICE RULES */}
           <div style={{ background: '#FFF3CD', border: '1px solid #FFEAA7', borderRadius: '16px', padding: '1.25rem' }}>
             <h3 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 0.75rem', color: '#856404' }}>💰 Price Rules</h3>
             <ul style={{ margin: 0, paddingLeft: '1.5rem', color: '#856404', fontSize: '12px' }}>
               <li style={{ marginBottom: '0.35rem' }}>Minimum price: ₹1000 per person</li>
               <li style={{ marginBottom: '0.35rem' }}>Easy treks: ₹1000+</li>
-              <li style={{ marginBottom: '0.35rem' }}>Waterfall destinations: ₹1500+</li>
-              <li style={{ marginBottom: '0.35rem' }}>Camping adventures: ₹2500+</li>
-              <li style={{ marginBottom: '0.35rem' }}>Weekend getaways: ₹3000+</li>
-              <li>Adventure treks: ₹4000+</li>
+              <li style={{ marginBottom: '0.35rem' }}>Moderate destinations: ₹1500+</li>
+              <li>Difficult / Remote journeys: ₹2500+</li>
             </ul>
           </div>
 
-          {/* ✅ PHASE 2: ACCOMMODATION */}
+          {/* ACCOMMODATION */}
           {destination.accommodation && (
             <div style={{ background: yellowLight, border: `1px solid ${yellowBorder}`, borderRadius: '16px', padding: '1.25rem' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 0.75rem', color: '#111827' }}>
-                🏨 Accommodation
-              </h3>
-              <p style={{ fontSize: '13px', color: '#374151', margin: 0, lineHeight: '1.6' }}>
-                {destination.accommodation}
-              </p>
+              <h3 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 0.75rem', color: '#111827' }}>🏨 Accommodation</h3>
+              <p style={{ fontSize: '13px', color: '#374151', margin: 0, lineHeight: '1.6' }}>{destination.accommodation}</p>
             </div>
           )}
 
-          {/* ✅ PHASE 2: LOCAL CUISINE */}
+          {/* LOCAL CUISINE */}
           {destination.local_cuisine && (
             <div style={{ background: yellowLight, border: `1px solid ${yellowBorder}`, borderRadius: '16px', padding: '1.25rem' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 0.75rem', color: '#111827' }}>
-                🍽️ Local Cuisine
-              </h3>
-              <p style={{ fontSize: '13px', color: '#374151', margin: 0, lineHeight: '1.6' }}>
-                {destination.local_cuisine}
-              </p>
+              <h3 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 0.75rem', color: '#111827' }}>🍽️ Local Cuisine</h3>
+              <p style={{ fontSize: '13px', color: '#374151', margin: 0, lineHeight: '1.6' }}>{destination.local_cuisine}</p>
             </div>
           )}
 
-          {/* ✅ PHASE 2: ALTITUDE & DISTANCE (if available) */}
+          {/* LOCATION DETAILS */}
           {(destination.altitude || destination.distance_from_major_city) && (
             <div style={{ background: yellowLight, border: `1px solid ${yellowBorder}`, borderRadius: '16px', padding: '1.25rem' }}>
               <h3 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 1rem', color: '#111827' }}>📏 Location Details</h3>

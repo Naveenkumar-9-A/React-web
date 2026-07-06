@@ -42,102 +42,55 @@ LOCATION_CACHE = {
     "munnar": {"lat": 10.5895, "lon": 77.0571},
 }
 
-# ========================================
-# BUG 1: TREKKING CATEGORY WHITELIST
-# ========================================
-VALID_TREKKING_CATEGORIES = {
-    'tourism',
-    'natural',
-    'peak',
-    'mountain',
-    'hill',
-    'waterfall',
-    'forest',
-    'wood',
-    'nature_reserve',
-    'national_park',
-    'viewpoint',
-    'camp_site',
-    'beach',
-    'cliff',
-    'trail',
-    'trek',
-    'hiking',
-    'wilderness',
-    'protected_area',
-    'pilgrimage',
-    'pilgrimage_hill',
-    'temple_hill',
-    'adventure',
-    'leisure',
-}
-
-# REJECT these categories completely
-REJECTED_CATEGORIES = {
-    'place', 'boundary', 'administrative', 'shop', 'office',
-    'residential', 'building', 'amenity', 'highway', 'railway',
-    'public_transport', 'education', 'health', 'commercial',
-    'industrial', 'military', 'craft', 'personal_services',
-}
-
-# REJECT keywords in name
-REJECTED_KEYWORDS = {
-    'parlour', 'salon', 'clinic', 'hospital', 'school', 'college',
-    'university', 'company', 'office', 'shop', 'store', 'mall',
-    'restaurant', 'cafe', 'bar', 'pub', 'hotel', 'motel', 'apartment',
-    'flat', 'house', 'villa', 'residential', 'bus stand', 'railway',
-    'airport', 'station', 'terminal', 'road', 'street', 'village',
-    'city', 'town', 'hamlet', 'lane', 'avenue', 'boulevard',
-}
 
 def normalize_search_query(query):
     """
     BUG 5: Normalize search query for better matching
-    
+
     Examples:
     "Tada Falls" → "tada falls"
     "Char Dham Yatra" → "char dham"
     """
     if not query:
         return ""
-    
+
     # Convert to lowercase
     normalized = query.lower().strip()
-    
+
     # Remove extra spaces
     normalized = ' '.join(normalized.split())
-    
+
     # Remove "falls", "trek", "yatra" suffix
     normalized = re.sub(r'\s+(falls|trek|yatra|trail|route)$', '', normalized)
-    
+
     return normalized
 
 
 def get_search_variations(query):
     """
     BUG 5: Generate query variations to try
-    
+
     Examples:
     "Tada Falls" → ["Tada Falls", "Tada", "Tada Waterfalls"]
     "Char Dham" → ["Char Dham", "Char", "Kedarnath"]
     """
     variations = [query]
     normalized = normalize_search_query(query)
-    
+
     # Add normalized version
     if normalized != query.lower():
         variations.append(normalized)
-    
+
     # Add first word only
     first_word = normalized.split()[0] if normalized else ""
     if first_word and first_word != normalized:
         variations.append(first_word)
-    
+
     # Add second word if exists (for multi-word queries)
     words = normalized.split()
     if len(words) > 1:
         variations.append(words[0] + " " + words[1])
-    
+
     # Special cases - add known alternatives
     aliases = {
         'char dham': ['kedarnath', 'badrinath', 'yamunotri', 'gangotri'],
@@ -145,47 +98,16 @@ def get_search_variations(query):
         'kailasa': ['kailasagiri'],
         'srisai': ['srisailam'],
     }
-    
+
     for key, alts in aliases.items():
         if key in normalized:
             variations.extend(alts)
-    
+
     # Remove duplicates and empty strings
     variations = [v.strip() for v in variations if v.strip()]
     variations = list(dict.fromkeys(variations))  # Remove duplicates preserving order
-    
+
     return variations
-
-
-def is_trekking_destination(osm_result):
-    """
-    BUG 1: Filter - Is this a trekking/tourism destination?
-    """
-    if not osm_result:
-        return False
-    
-    name = osm_result.get('name', '').lower()
-    category = osm_result.get('category', '').lower()
-    osm_class = osm_result.get('class', '').lower()
-    
-    # Check for rejected keywords
-    for keyword in REJECTED_KEYWORDS:
-        if keyword in name:
-            logger.warning(f"❌ Rejected (keyword '{keyword}'): {name}")
-            return False
-    
-    # Check for rejected categories
-    if category in REJECTED_CATEGORIES or osm_class in REJECTED_CATEGORIES:
-        logger.warning(f"❌ Rejected (category '{category}'): {name}")
-        return False
-    
-    # Check for valid categories
-    if category in VALID_TREKKING_CATEGORIES or osm_class in VALID_TREKKING_CATEGORIES:
-        logger.info(f"✅ Accepted (category '{category}'): {name}")
-        return True
-    
-    logger.warning(f"❌ Rejected (no match): {name}")
-    return False
 
 
 def get_result_rank(osm_result):
@@ -194,9 +116,9 @@ def get_result_rank(osm_result):
     """
     name = osm_result.get('name', '').lower()
     category = osm_result.get('category', '').lower()
-    
+
     rank = 0
-    
+
     # Exact match gets highest score
     if 'waterfall' in name:
         rank += 1000
@@ -220,7 +142,7 @@ def get_result_rank(osm_result):
         rank += 250
     if 'spiritual' in name or 'temple' in name or 'pilgrimage' in name:
         rank += 200
-    
+
     # Category bonus
     if category == 'waterfall':
         rank += 900
@@ -234,36 +156,36 @@ def get_result_rank(osm_result):
         rank += 400
     elif category == 'adventure':
         rank += 350
-    
+
     return rank
 
 
 def geocode_location(location_name):
     """
     Convert location name to coordinates using OpenStreetMap Nominatim API.
-    
+
     Args:
         location_name (str): Name of the location (e.g., "Varanasi")
-    
+
     Returns:
         dict: {"lat": float, "lon": float} or None if not found
     """
-    
+
     if not location_name:
         return None
-    
+
     normalized_name = location_name.lower().strip()
-    
+
     # Check built-in cache first
     if normalized_name in LOCATION_CACHE:
         return LOCATION_CACHE[normalized_name]
-    
+
     # Check Django cache
     cache_key = f"geocode_{normalized_name}"
     cached_result = cache.get(cache_key)
     if cached_result:
         return cached_result
-    
+
     try:
         # OpenStreetMap Nominatim API
         url = "https://nominatim.openstreetmap.org/search"
@@ -272,30 +194,30 @@ def geocode_location(location_name):
             "format": "json",
             "limit": 1,
         }
-        
+
         headers = {
             "User-Agent": "AorboTreks/1.0 (Trek Mapping Service)"
         }
-        
+
         response = requests.get(url, params=params, headers=headers, timeout=5)
         response.raise_for_status()
-        
+
         results = response.json()
-        
+
         if results and len(results) > 0:
             result = results[0]
             coords = {
                 "lat": float(result["lat"]),
                 "lon": float(result["lon"])
             }
-            
+
             # Cache for 30 days
             cache.set(cache_key, coords, 60 * 60 * 24 * 30)
             return coords
-        
+
         logger.warning(f"Geocoding failed: No results for {location_name}")
         return None
-        
+
     except requests.exceptions.RequestException as e:
         logger.error(f"Geocoding API error for {location_name}: {e}")
         return None
@@ -304,91 +226,13 @@ def geocode_location(location_name):
         return None
 
 
-def filter_osm_results(results):
-    """
-    BUG 1: Filter OpenStreetMap results - only keep trekking destinations
-    """
-    if not results:
-        return []
-    
-    filtered = []
-    seen_names = set()
-    
-    for result in results:
-        name = result.get('name', '').lower().strip()
-        
-        # Skip duplicates
-        if name in seen_names:
-            continue
-        
-        # Check if trekking destination
-        if is_trekking_destination(result):
-            filtered.append(result)
-            seen_names.add(name)
-    
-    # BUG 4: Sort by ranking
-    filtered.sort(key=lambda x: get_result_rank(x), reverse=True)
-    
-    return filtered
-
-
-def search_osm_multiple_queries(query):
-    """
-    BUG 2 & BUG 5: Try multiple queries before giving up
-    """
-    variations = get_search_variations(query)
-    all_results = []
-    seen_names = set()
-    
-    logger.info(f"🔍 Searching with {len(variations)} variations: {variations}")
-    
-    for variation in variations:
-        try:
-            url = "https://nominatim.openstreetmap.org/search"
-            params = {
-                "q": f"{variation}, India",
-                "format": "json",
-                "limit": 20,
-                "countrycodes": "in"
-            }
-            
-            headers = {
-                "User-Agent": "AorboTreks/1.0 (Trek Mapping Service)"
-            }
-            
-            response = requests.get(url, params=params, headers=headers, timeout=5)
-            response.raise_for_status()
-            
-            results = response.json()
-            logger.info(f"  ✓ Query '{variation}': {len(results)} results")
-            
-            # Add unique results
-            for result in results:
-                name = result.get('name', '').lower().strip()
-                if name not in seen_names:
-                    all_results.append(result)
-                    seen_names.add(name)
-            
-        except Exception as e:
-            logger.warning(f"  ✗ Query '{variation}' failed: {e}")
-            continue
-    
-    logger.info(f"📍 Total unique results: {len(all_results)}")
-    
-    # Filter and rank
-    filtered = filter_osm_results(all_results)
-    logger.info(f"✅ After filtering: {len(filtered)} trekking destinations")
-    
-    return filtered
-
-
 def geocode_multiple_locations(locations):
     """
     Geocode multiple locations efficiently.
-    
+
     Args:
         locations (list): List of location names
-    
+
     Returns:
         dict: {location_name: {"lat": float, "lon": float}}
     """
@@ -475,60 +319,68 @@ TREKKING_KEYWORDS = {
     'valley', 'viewpoint', 'camp site', 'wilderness',
 }
 
+# Place types that are administrative/inhabited areas, not destinations
+REJECTED_PLACE_TYPES = {
+    'city', 'state_district', 'district', 'county',
+    'administrative', 'region', 'state', 'municipality',
+}
+
 
 def is_trekking_destination(osm_result):
     """
     ✅ BACKEND FILTERING: Validate if OSM result is a trekking destination.
-    
+
     Args:
         osm_result (dict): OpenStreetMap result with 'name', 'category', 'class', 'type'
-    
+
     Returns:
         bool: True if trekking-related, False otherwise
     """
-    
+
     if not osm_result:
         return False
-    
+
     name = osm_result.get('name', '').lower().strip()
     category = osm_result.get('category', '').lower().strip()
     osm_class = osm_result.get('class', '').lower().strip()
     osm_type = osm_result.get('type', '').lower().strip()
-    
+
     # Step 1: Check if name contains rejected keywords
     for keyword in REJECTED_KEYWORDS:
         if keyword in name:
             logger.warning(f"❌ Rejected (rejected keyword '{keyword}'): {name}")
             return False
-    
+
     # Step 2: Check if category is in trekking categories (HIGHEST PRIORITY)
     if category in TREKKING_CATEGORIES:
         logger.info(f"✅ Accepted (category '{category}'): {name}")
         return True
-    
+
     # Step 3: Check if type matches trekking
     if osm_type in TREKKING_CATEGORIES:
         logger.info(f"✅ Accepted (type '{osm_type}'): {name}")
         return True
-    
+
     # Step 4: Check if name contains trekking keywords
     for keyword in TREKKING_KEYWORDS:
         if keyword in name:
             logger.info(f"✅ Accepted (trekking keyword '{keyword}'): {name}")
             return True
-    
-    # Step 5: If it's a "place", only reject if it has rejected keywords (already checked)
-    # Places like Srisailam, Munnar, etc. are valid destinations even with class='place'
-    # They should only be rejected if they have rejected keywords or are clearly non-trekking
+
+    # Step 5: "place" class needs a type check — cities/towns/villages/districts are
+    # also tagged class='place' by Nominatim, so we only accept genuine destination types
     if osm_class == 'place':
+        if osm_type in REJECTED_PLACE_TYPES:
+            logger.warning(f"❌ Rejected (administrative place type '{osm_type}'): {name}")
+            return False
         logger.info(f"✅ Accepted (place: {name})")
         return True
-    
+
     # Step 6: Check if OSM class is in rejected list
     if osm_class in REJECTED_OSM_CLASSES:
         logger.warning(f"❌ Rejected (rejected class '{osm_class}'): {name}")
         return False
-    
+
     logger.warning(f"❌ Rejected (no match): category='{category}', class='{osm_class}', name='{name}'")
     return False
 
@@ -536,30 +388,83 @@ def is_trekking_destination(osm_result):
 def filter_osm_results(osm_results):
     """
     ✅ BACKEND FILTERING: Filter OSM results to only include trekking destinations.
-    
+
     Args:
         osm_results (list): List of OpenStreetMap results
-    
+
     Returns:
         list: Filtered list of trekking-related results
     """
-    
+
     if not osm_results:
         return []
-    
+
     filtered = []
     seen_names = set()  # Prevent duplicates
-    
+
     for result in osm_results:
         # Skip if already seen (duplicate)
         result_name = result.get('name', '').lower().strip()
         if result_name in seen_names:
             logger.info(f"⚠️  Duplicate: {result_name}")
             continue
-        
+
         # Check if trekking-related
         if is_trekking_destination(result):
             filtered.append(result)
             seen_names.add(result_name)
-    
+
+    # Sort by ranking
+    filtered.sort(key=lambda x: get_result_rank(x), reverse=True)
+
+    return filtered
+
+
+def search_osm_multiple_queries(query):
+    """
+    BUG 2 & BUG 5: Try multiple queries before giving up
+    """
+    variations = get_search_variations(query)
+    all_results = []
+    seen_names = set()
+
+    logger.info(f"🔍 Searching with {len(variations)} variations: {variations}")
+
+    for variation in variations:
+        try:
+            url = "https://nominatim.openstreetmap.org/search"
+            params = {
+                "q": f"{variation}, India",
+                "format": "json",
+                "limit": 20,
+                "countrycodes": "in"
+            }
+
+            headers = {
+                "User-Agent": "AorboTreks/1.0 (Trek Mapping Service)"
+            }
+
+            response = requests.get(url, params=params, headers=headers, timeout=5)
+            response.raise_for_status()
+
+            results = response.json()
+            logger.info(f"  ✓ Query '{variation}': {len(results)} results")
+
+            # Add unique results
+            for result in results:
+                name = result.get('name', '').lower().strip()
+                if name not in seen_names:
+                    all_results.append(result)
+                    seen_names.add(name)
+
+        except Exception as e:
+            logger.warning(f"  ✗ Query '{variation}' failed: {e}")
+            continue
+
+    logger.info(f"📍 Total unique results: {len(all_results)}")
+
+    # Filter and rank
+    filtered = filter_osm_results(all_results)
+    logger.info(f"✅ After filtering: {len(filtered)} trekking destinations")
+
     return filtered

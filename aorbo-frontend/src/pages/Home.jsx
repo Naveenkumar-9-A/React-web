@@ -3,9 +3,9 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { MapPin, Clock, Calendar, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
-import TrekMap from '../components/TrekMap';
-import DestinationCard from '../components/DestinationCard';
-import { useEnhancedSearch } from '../hooks/useEnhancedSearch';
+// import TrekMap from '../components/TrekMap';
+// import DestinationCard from '../components/DestinationCard';
+// import { useEnhancedSearch } from '../hooks/useEnhancedSearch';
 import { generateSlug } from '../utils/slugUtils';
 import '../styles/Home.css';
 
@@ -18,7 +18,7 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedTag, setSelectedTag] = useState('');
-  const [showHeroMap, setShowHeroMap] = useState(false);
+  // const [showHeroMap, setShowHeroMap] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const suggestionRef = useRef(null);
@@ -27,17 +27,17 @@ export default function Home() {
   // Define BACKEND_URL first!
   const BACKEND_URL = 'http://127.0.0.1:8000';
 
-const {
-  filteredTreks,
-  osmResults,
-  highlightedTrekId,
-  isLoading,
-  loadingMessage,
-  errorMessage,
-  handleSearch,
-  handleMapMarkerClick,
-  clearSearch,
-} = useEnhancedSearch(allTreksForSearch, BACKEND_URL); // 🔍 Search against ALL treks with backend URL for AI enrichment
+// const {
+//   filteredTreks,
+//   osmResults,
+//   highlightedTrekId,
+//   isLoading,
+//   loadingMessage,
+//   errorMessage,
+//   handleSearch,
+//   handleMapMarkerClick,
+//   clearSearch,
+// } = useEnhancedSearch(allTreksForSearch, BACKEND_URL); // 🔍 Search against ALL treks with backend URL for AI enrichment
 
 
   useEffect(() => {
@@ -93,45 +93,62 @@ const fetchAllTreksForSearch = async () => {
 };
 
 const debounceRef = useRef(null);
-
+const latestQueryRef = useRef('');
 const handleSearchInput = (e) => {
   const val = e.target.value;
   setSearchQuery(val);
 
-  // Show map when typing
-  if (val.length >= 2) {
-    setShowHeroMap(true);
-    handleSearch(val);
-  }
-
   if (val.length < 2) {
+    console.log(`[${Date.now()}] Clearing suggestions, val too short: "${val}"`);
     setSuggestions([]);
     setShowSuggestions(false);
-    setShowHeroMap(false);
-    clearSearch();
     clearTimeout(debounceRef.current);
     return;
   }
 
   clearTimeout(debounceRef.current);
+  latestQueryRef.current = val;
 
-  // Wait 500ms before requesting suggestions
   debounceRef.current = setTimeout(async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/treks/search/?q=${val}`);
       const data = await res.json();
-
       const trekSuggestions = Array.isArray(data) ? data : [];
 
-      setSuggestions(trekSuggestions.slice(0, 8));
-      setShowSuggestions(true);
+      // Ignore this response if the user has typed something new since this search started
+      if (latestQueryRef.current !== val) return;
+
+      if (trekSuggestions.length > 0) {
+        setSuggestions(trekSuggestions.slice(0, 8));
+        setShowSuggestions(true);
+        return;
+      }
+
+      const osmRes = await fetch(`${BACKEND_URL}/api/search/intelligent/?q=${val}`);
+      const osmData = await osmRes.json();
+      const osmMatches = Array.isArray(osmData.results) ? osmData.results : [];
+
+      // Ignore this response too if a newer search has since started
+      if (latestQueryRef.current !== val) return;
+
+      const osmSuggestions = osmMatches.slice(0, 5).map((r, idx) => ({
+        id: `osm-${idx}`,
+        name: r.name,
+        display_name: r.display_name,
+        lat: parseFloat(r.lat),
+        lon: parseFloat(r.lon),
+        category: r.category,
+        type: 'osm',
+      }));
+
+      setSuggestions(osmSuggestions);
+      setShowSuggestions(osmSuggestions.length > 0);
     } catch (err) {
       console.error('Search error:', err);
       setSuggestions([]);
     }
   }, 500);
 };
-
  const handleSearchSubmit = (e) => {
     e.preventDefault();
 
@@ -176,12 +193,8 @@ const handleSuggestionClick = (suggestion) => {
   // ✅ Navigate based on suggestion type
   if (suggestion.type === 'osm') {
     const slug = generateSlug(suggestion.name);
-
     navigate(`/destination/${slug}`, {
-      state: {
-        source: 'osm',
-        destination: suggestion,
-      },
+      state: { destination: suggestion },
     });
   } else {
     navigate(`/treks/${suggestion.id}`);
@@ -206,24 +219,24 @@ const handleTagClick = (tag) => {
 };
 
 // ✅ Handle map marker click
-const handleMapMarkerClickWithNav = (trek) => {
-  handleMapMarkerClick(trek);
+// const handleMapMarkerClickWithNav = (trek) => {
+//   handleMapMarkerClick(trek);
 
-  if (!trek.id) return;
+//   if (!trek.id) return;
 
-  if (String(trek.id).startsWith('osm-')) {
-    const slug = generateSlug(trek.name);
+//   if (String(trek.id).startsWith('osm-')) {
+//     const slug = generateSlug(trek.name);
 
-    navigate(`/destination/${slug}`, {
-      state: {
-        source: 'osm',
-        destination: trek,
-      },
-    });
-  } else {
-    navigate(`/treks/${trek.id}`);
-  }
-};
+//     navigate(`/destination/${slug}`, {
+//       state: {
+//         source: 'osm',
+//         destination: trek,
+//       },
+//     });
+//   } else {
+//     navigate(`/treks/${trek.id}`);
+//   }
+// };
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -351,10 +364,10 @@ const handleMapMarkerClickWithNav = (trek) => {
               </div>
             </form>
 
-            {/* 🗺️ ENHANCED: OpenStreetMap with Trek Database + Nominatim Results */}
-            {showHeroMap && searchQuery.length >= 2 && (
+            {/*🗺️ ENHANCED: OpenStreetMap with Trek Database + Nominatim Results
+             {showHeroMap && searchQuery.length >= 2 && (
               <div style={{ marginTop: '2rem', maxWidth: '800px', margin: '2rem auto 0' }}>
-                {/* Search Status */}
+                {/* Search Status 
                 {isLoading && filteredTreks.length === 0 && (
                   <div style={{ 
                     textAlign: 'center', 
@@ -369,7 +382,7 @@ const handleMapMarkerClickWithNav = (trek) => {
                   </div>
                 )}
 
-                {/* Trek Results Found */}
+                {/* Trek Results Found 
                 {filteredTreks.length > 0 && (
                   <div style={{ 
                     textAlign: 'center', 
@@ -384,7 +397,7 @@ const handleMapMarkerClickWithNav = (trek) => {
                   </div>
                 )}
 
-                {/* OSM Results Found */}
+                {/* OSM Results Found 
                 {osmResults.length > 0 && filteredTreks.length === 0 && (
                   <div style={{ 
                     textAlign: 'center', 
@@ -399,7 +412,7 @@ const handleMapMarkerClickWithNav = (trek) => {
                   </div>
                 )}
 
-                {/* No Results */}
+                {/* No Results 
                 {!isLoading && filteredTreks.length === 0 && osmResults.length === 0 && (
                   <div style={{ 
                     textAlign: 'center', 
@@ -414,7 +427,7 @@ const handleMapMarkerClickWithNav = (trek) => {
                   </div>
                 )}
 
-                {/* Map Component */}
+                {/* Map Component 
                 <TrekMap
                   treks={filteredTreks}
                   osmResults={osmResults}
@@ -423,7 +436,7 @@ const handleMapMarkerClickWithNav = (trek) => {
                   highlightedTrekId={highlightedTrekId}
                 />
 
-                {/* OSM Destination Cards */}
+                {/* OSM Destination Cards 
                 {osmResults.length > 0 && filteredTreks.length === 0 && (
                   <div style={{ marginTop: '2rem', maxWidth: '800px', margin: '2rem auto 0' }}>
                     <h4 style={{ 
@@ -440,7 +453,7 @@ const handleMapMarkerClickWithNav = (trek) => {
                   </div>
                 )}
               </div>
-            )}
+            )} */}
           </div>
         </div>
       </section>

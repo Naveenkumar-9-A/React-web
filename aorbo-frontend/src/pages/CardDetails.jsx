@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 
 export default function CardDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const [trek, setTrek] = useState(null);
   const [relatedTreks, setRelatedTreks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [source, setSource] = useState('database'); // 'database' or 'osm'
 
   const BACKEND_URL = 'http://127.0.0.1:8000';
 
@@ -16,22 +14,10 @@ export default function CardDetails() {
     async function getDetails() {
       try {
         setLoading(true);
-        
-        // PHASE 1: Check if OSM destination data is passed via state
-        if (location.state?.destination) {
-          console.log('📍 Loading OSM destination:', location.state.destination);
-          setSource('osm');
-          setTrek(location.state.destination);
-          setRelatedTreks([]); // OSM destinations have no related treks yet
-          setLoading(false);
-          return;
-        }
-        
-        // Otherwise fetch from database using ID parameter
+
         const res = await fetch(`${BACKEND_URL}/api/treks/${id}/`);
         if (!res.ok) throw new Error("Trek not found");
         const data = await res.json();
-        setSource('database');
         setTrek(data);
         setRelatedTreks(data.related_treks || []);
       } catch (err) {
@@ -41,7 +27,7 @@ export default function CardDetails() {
       }
     }
     getDetails();
-  }, [id, location.state]);
+  }, [id]);
 
   if (loading) {
     return (
@@ -59,11 +45,9 @@ export default function CardDetails() {
     );
   }
 
-  const imgSrc = source === 'osm' 
-    ? undefined // OSM doesn't have images yet
-    : trek.main_image
-      ? (trek.main_image.startsWith('http') ? trek.main_image : `${BACKEND_URL}${trek.main_image}`)
-      : '/images/placeholder.jpg';
+  const imgSrc = trek.main_image
+    ? (trek.main_image.startsWith('http') ? trek.main_image : `${BACKEND_URL}${trek.main_image}`)
+    : '/images/placeholder.jpg';
 
   // Theme colors
   const yellow = '#FFE100';
@@ -78,17 +62,11 @@ export default function CardDetails() {
 
       {/* HERO SECTION */}
       <div style={{ position: 'relative', borderRadius: '20px', overflow: 'hidden', marginBottom: '1.5rem', minHeight: '320px', background: darkGreen }}>
-        {source === 'osm' ? (
-          // OSM destination: gradient background instead of image
-          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${darkGreen} 0%, #2d5a2d 100%)` }} />
-        ) : (
-          // Database trek: image background
-          <img
-            src={imgSrc}
-            alt={trek.name}
-            style={{ width: '100%', height: '380px', objectFit: 'cover', opacity: 0.6, display: 'block' }}
-          />
-        )}
+        <img
+          src={imgSrc}
+          alt={trek.name}
+          style={{ width: '100%', height: '380px', objectFit: 'cover', opacity: 0.6, display: 'block' }}
+        />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,20,10,0.92) 0%, rgba(10,20,10,0.3) 60%, transparent 100%)' }} />
 
         {/* BACK BUTTON */}
@@ -107,27 +85,17 @@ export default function CardDetails() {
                 📍 {trek.state}
               </span>
             )}
-            {source === 'osm' && (
-              <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', fontSize: '11px', padding: '3px 12px', borderRadius: '999px', backdropFilter: 'blur(4px)' }}>
-                🗺️ OpenStreetMap
-              </span>
-            )}
           </div>
           <h1 style={{ color: '#fff', fontSize: 'clamp(1.6rem, 4vw, 2.2rem)', fontWeight: '700', margin: '0 0 0.75rem', lineHeight: 1.2 }}>
             {trek.name}
           </h1>
           <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            {/* Duration - handle both database and OSM data */}
             {trek.duration_days && (
               <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>🕒 {trek.duration_days}</span>
             )}
-            {trek.best_time_to_visit && source === 'osm' && (
-              <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>📅 {trek.best_time_to_visit}</span>
-            )}
-            {trek.operating_days && source === 'database' && (
+            {trek.operating_days && (
               <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>📅 {trek.operating_days}</span>
             )}
-            {/* Price - show if available */}
             {trek.price_start && (
               <span style={{ background: yellow, color: '#1a1a1a', fontSize: '13px', fontWeight: '700', padding: '5px 14px', borderRadius: '999px', marginLeft: 'auto' }}>
                 ₹{trek.price_start} onwards
@@ -146,7 +114,7 @@ export default function CardDetails() {
           {/* DESCRIPTION */}
           <div style={{ background: yellowLight, border: `1px solid ${yellowBorder}`, borderRadius: '16px', padding: '1.5rem' }}>
             <h2 style={{ fontSize: '1.1rem', fontWeight: '700', margin: '0 0 0.75rem', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: orange }}>📖</span> About this {source === 'osm' ? 'Destination' : 'Trek'}
+              <span style={{ color: orange }}>📖</span> About this Trek
             </h2>
             <p style={{ color: '#374151', lineHeight: '1.8', fontSize: '0.98rem', margin: 0 }}>
               {trek.description || trek.summary || `Explore ${trek.name}, a wonderful destination waiting for you.`}
@@ -169,14 +137,14 @@ export default function CardDetails() {
             </div>
           )}
 
-          {/* FAMOUS PLACES / NEARBY ATTRACTIONS */}
+          {/* FAMOUS PLACES */}
           <div style={{ background: yellowLight, border: `1px solid ${yellowBorder}`, borderRadius: '16px', padding: '1.5rem' }}>
             <h2 style={{ fontSize: '1.1rem', fontWeight: '700', margin: '0 0 1rem', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: orange }}>📍</span> {source === 'osm' ? 'Nearby Attractions' : 'Famous Places'}
+              <span style={{ color: orange }}>📍</span> Famous Places
             </h2>
-            {(source === 'database' ? trek.famous_places : trek.nearby_attractions)?.length > 0 ? (
+            {trek.famous_places?.length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '8px' }}>
-                {(source === 'database' ? trek.famous_places : trek.nearby_attractions).map((place, i) => (
+                {trek.famous_places.map((place, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#374151', background: '#fff', padding: '8px 12px', borderRadius: '10px', border: `1px solid ${yellowBorder}` }}>
                     <span style={{ color: orange, fontSize: '10px' }}>●</span> {place}
                   </div>
@@ -219,7 +187,6 @@ export default function CardDetails() {
             <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', margin: '0 0 0.25rem' }}>Starting from</p>
             <p style={{ fontSize: '2rem', fontWeight: '700', color: yellow, margin: '0 0 0.25rem', lineHeight: 1 }}>₹{trek.price_start}</p>
             <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', margin: '0 0 1.25rem' }}>per person onwards*</p>
-
           </div>
 
           {/* TRIP INFO */}
@@ -235,29 +202,11 @@ export default function CardDetails() {
                   <div style={{ borderTop: `1px solid ${yellowBorder}` }} />
                 </>
               )}
-              {source === 'database' && trek.operating_days && (
+              {trek.operating_days && (
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ color: '#6b7280' }}>📅 Departure</span>
                     <span style={{ fontWeight: '600', color: '#111827' }}>{trek.operating_days}</span>
-                  </div>
-                  <div style={{ borderTop: `1px solid ${yellowBorder}` }} />
-                </>
-              )}
-              {source === 'osm' && trek.best_time_to_visit && (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#6b7280' }}>📅 Best Time</span>
-                    <span style={{ fontWeight: '600', color: '#111827' }}>{trek.best_time_to_visit}</span>
-                  </div>
-                  <div style={{ borderTop: `1px solid ${yellowBorder}` }} />
-                </>
-              )}
-              {source === 'osm' && trek.difficulty && (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#6b7280' }}>⛰️ Difficulty</span>
-                    <span style={{ fontWeight: '600', color: '#111827', textTransform: 'capitalize' }}>{trek.difficulty}</span>
                   </div>
                   <div style={{ borderTop: `1px solid ${yellowBorder}` }} />
                 </>
@@ -271,26 +220,24 @@ export default function CardDetails() {
             </div>
           </div>
 
-          {/* OPERATORS - Only show for database treks */}
-          {source === 'database' && (
-            <div style={{ background: yellowLight, border: `1px solid ${yellowBorder}`, borderRadius: '16px', padding: '1.25rem' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 1rem', color: '#111827' }}>
-                ✅ Trusted Operators
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {trek.operators?.length > 0 ? trek.operators.map((op, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', padding: '8px 10px', background: yellow, borderRadius: '10px', border: `1px solid ${yellowBorder}` }}>
-                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: darkGreen, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: yellow, fontWeight: '700', flexShrink: 0 }}>
-                      {op.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
-                    </div>
-                    <span style={{ color: '#1a1a1a', fontWeight: '600' }}>{op}</span>
+          {/* OPERATORS */}
+          <div style={{ background: yellowLight, border: `1px solid ${yellowBorder}`, borderRadius: '16px', padding: '1.25rem' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 1rem', color: '#111827' }}>
+              ✅ Trusted Operators
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {trek.operators?.length > 0 ? trek.operators.map((op, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', padding: '8px 10px', background: yellow, borderRadius: '10px', border: `1px solid ${yellowBorder}` }}>
+                  <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: darkGreen, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: yellow, fontWeight: '700', flexShrink: 0 }}>
+                    {op.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
                   </div>
-                )) : (
-                  <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0 }}>Coming soon...</p>
-                )}
-              </div>
+                  <span style={{ color: '#1a1a1a', fontWeight: '600' }}>{op}</span>
+                </div>
+              )) : (
+                <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0 }}>Coming soon...</p>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </main>
