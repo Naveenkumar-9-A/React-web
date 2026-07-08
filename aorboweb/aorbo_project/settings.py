@@ -99,7 +99,7 @@ if DEBUG:
         "http://127.0.0.1:5173",
     ]
 
-CORS_ALLOW_CREDENTIALS = False
+CORS_ALLOW_CREDENTIALS = True
 
 # Rate limiting with django-axes
 AXES_FAILURE_LIMIT = 5

@@ -27,6 +27,7 @@ urlpatterns = [
     path('api/treks/', views.api_featured_treks, name='api_featured_treks'),
     path('api/treks/search/', views.api_search_suggestions, name='api_search_suggestions'),
     path('api/treks/log-click/', views.api_log_trek_click, name='api_log_trek_click'),
+    path('api/treks/create-from-osm/', views.api_create_trek_from_osm, name='api_create_trek_from_osm'),
 path('api/analytics/', views.api_analytics, name='api_analytics'),
 path('api/treks/<str:slug>/', views.api_trek_detail, name='api_trek_detail'),
 path('api/travel-your-way/', views.api_travel_your_way, name='api_travel_your_way'),

@@ -324,7 +324,7 @@ class TermsAndConditionsAdmin(admin.ModelAdmin):
 class TrekListAdmin(admin.ModelAdmin):
     list_display = (
         'name', 'state', 'is_pinned', 'pin_priority',
-        'duration_days', 'price_start', 'currency', 'created_at'
+        'duration_days', 'price_start', 'currency', 'is_ai_generated', 'created_at'
     )
     list_editable  = ('is_pinned', 'pin_priority')
     list_filter    = ('state', 'currency', 'is_pinned', 'created_at')
@@ -339,6 +339,10 @@ class TrekListAdmin(admin.ModelAdmin):
         ("Pricing & Duration", {"fields": ('duration_days', 'price_start', 'currency', 'operating_days')}),
         ("Content",          {"fields": ('short_desc', 'activities')}),
         ("Relationships",    {"fields": ('tags', 'operators', 'trek_points', 'related_treks')}),
+        ("🤖 AI Generation Status", {
+            "fields": ('is_ai_generated',),
+            "description": "Checked = auto-created from an OpenStreetMap search, may still need a real photo, price, and schedule. Uncheck once fully reviewed and finished."
+        }),
         ("Meta",             {"fields": ('created_at',), "classes": ('collapse',)}),
     )
     filter_horizontal = ('tags', 'operators', 'trek_points', 'related_treks')

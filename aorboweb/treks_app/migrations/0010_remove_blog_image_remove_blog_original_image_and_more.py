@@ -8,27 +8,11 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('treks_app', '0009_merge_20260624_1023'),
+        ('treks_app', '0009_searchlog_remove_blog_image_and_more'),
+        ('treks_app', '0009_alter_contact_options_remove_blog_image_and_more'),
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='blog',
-            name='image',
-        ),
-        migrations.RemoveField(
-            model_name='blog',
-            name='original_image',
-        ),
-        migrations.AlterField(
-            model_name='blog',
-            name='image_url',
-            field=models.URLField(blank=True, null=True),
-        ),
-        migrations.AlterField(
-            model_name='blog',
-            name='original_image_url',
-            field=models.URLField(blank=True, null=True),
-        ),
         migrations.AddField(
             model_name='searchlog',
             name='trek',
