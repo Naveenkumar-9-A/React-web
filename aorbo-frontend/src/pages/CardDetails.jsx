@@ -14,6 +14,7 @@ export default function CardDetails() {
     async function getDetails() {
       try {
         setLoading(true);
+
         const res = await fetch(`${BACKEND_URL}/api/treks/${id}/`);
         if (!res.ok) throw new Error("Trek not found");
         const data = await res.json();
@@ -89,11 +90,17 @@ export default function CardDetails() {
             {trek.name}
           </h1>
           <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>🕒 {trek.duration_days}</span>
-            <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>📅 {trek.operating_days}</span>
-            <span style={{ background: yellow, color: '#1a1a1a', fontSize: '13px', fontWeight: '700', padding: '5px 14px', borderRadius: '999px', marginLeft: 'auto' }}>
-              ₹{trek.price_start} onwards
-            </span>
+            {trek.duration_days && (
+              <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>🕒 {trek.duration_days}</span>
+            )}
+            {trek.operating_days && (
+              <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>📅 {trek.operating_days}</span>
+            )}
+            {trek.price_start && (
+              <span style={{ background: yellow, color: '#1a1a1a', fontSize: '13px', fontWeight: '700', padding: '5px 14px', borderRadius: '999px', marginLeft: 'auto' }}>
+                ₹{trek.price_start} onwards
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -110,7 +117,7 @@ export default function CardDetails() {
               <span style={{ color: orange }}>📖</span> About this Trek
             </h2>
             <p style={{ color: '#374151', lineHeight: '1.8', fontSize: '0.98rem', margin: 0 }}>
-              {trek.description || 'No description available.'}
+              {trek.description || trek.summary || `Explore ${trek.name}, a wonderful destination waiting for you.`}
             </p>
           </div>
 
@@ -180,27 +187,36 @@ export default function CardDetails() {
             <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', margin: '0 0 0.25rem' }}>Starting from</p>
             <p style={{ fontSize: '2rem', fontWeight: '700', color: yellow, margin: '0 0 0.25rem', lineHeight: 1 }}>₹{trek.price_start}</p>
             <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', margin: '0 0 1.25rem' }}>per person onwards*</p>
-
           </div>
 
           {/* TRIP INFO */}
           <div style={{ background: yellowLight, border: `1px solid ${yellowBorder}`, borderRadius: '16px', padding: '1.25rem' }}>
             <h3 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 1rem', color: '#111827' }}>Trip Info</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#6b7280' }}>🕒 Duration</span>
-                <span style={{ fontWeight: '600', color: '#111827' }}>{trek.duration_days}</span>
-              </div>
-              <div style={{ borderTop: `1px solid ${yellowBorder}` }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#6b7280' }}>📅 Departure</span>
-                <span style={{ fontWeight: '600', color: '#111827' }}>{trek.operating_days}</span>
-              </div>
-              <div style={{ borderTop: `1px solid ${yellowBorder}` }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#6b7280' }}>📍 State</span>
-                <span style={{ fontWeight: '600', color: '#111827' }}>{trek.state}</span>
-              </div>
+              {trek.duration_days && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#6b7280' }}>🕒 Duration</span>
+                    <span style={{ fontWeight: '600', color: '#111827' }}>{trek.duration_days}</span>
+                  </div>
+                  <div style={{ borderTop: `1px solid ${yellowBorder}` }} />
+                </>
+              )}
+              {trek.operating_days && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#6b7280' }}>📅 Departure</span>
+                    <span style={{ fontWeight: '600', color: '#111827' }}>{trek.operating_days}</span>
+                  </div>
+                  <div style={{ borderTop: `1px solid ${yellowBorder}` }} />
+                </>
+              )}
+              {trek.state && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#6b7280' }}>📍 Location</span>
+                  <span style={{ fontWeight: '600', color: '#111827' }}>{trek.state}</span>
+                </div>
+              )}
             </div>
           </div>
 

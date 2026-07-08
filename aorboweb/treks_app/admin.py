@@ -2,12 +2,13 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Count
 from django.utils import timezone
+from datetime import timedelta
 from django.utils.safestring import mark_safe
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 import supabase
 from django import forms
-from datetime import timedelta
+
 import json
 
 admin.site.site_header = "Aorbo Treks Admin"
@@ -17,340 +18,341 @@ admin.site.index_title = "Dashboard"
 from .models import (
     Contact, Blog, TrekCategory, TrekOrganizer, Trek, TrekImage,
     Testimonial, FAQ, SafetyTip, TeamMember, HomepageBanner,
-    SocialMedia, ContactInfo, TrekList, Visitor, 
-    TermsAndConditions, Operator, Tag, TrekPoint , SearchLog 
-)   
+    SocialMedia, ContactInfo, TrekList, Visitor,
+    TermsAndConditions, Operator, Tag, TrekPoint, SearchLog
+)
 
-# Register your models here.
+
+# ── Contact Date Range Filter ────────────────────────────────────────────────
+class ContactDateRangeFilter(admin.SimpleListFilter):
+    title = 'Date Range'
+    parameter_name = 'date_range'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('today',     'Today'),
+            ('this_week', 'This Week'),
+            ('this_year', 'This Year'),
+        ]
+
+    def queryset(self, request, queryset):
+        now = timezone.now()
+        if self.value() == 'today':
+            return queryset.filter(created_at__date=now.date())
+        if self.value() == 'this_week':
+            start_of_week = now - timedelta(days=now.weekday())
+            return queryset.filter(created_at__gte=start_of_week)
+        if self.value() == 'this_year':
+            return queryset.filter(created_at__year=now.year)
+        return queryset
+
+
+# ── Contact Admin ───────────────────────────────────────────────────────────
 @admin.register(Contact)
 class ContactAdmin(admin.ModelAdmin):
-    list_display = ('name', 'email', 'mobile', 'user_type', 'created_at')
-    list_filter = ('user_type', 'created_at')
-    search_fields = ('name', 'email', 'mobile', 'comment')
+    list_display   = ('name', 'email', 'mobile', 'user_type', 'trek_category', 'created_at')
+    list_filter    = ('user_type', 'trek_category', ContactDateRangeFilter)
+    search_fields  = ('name', 'email', 'mobile', 'comment')
     readonly_fields = ('created_at',)
     date_hierarchy = 'created_at'
+    change_list_template = "admin/contact_filter.html"
 
+    def changelist_view(self, request, extra_context=None):
+        qs = Contact.objects.all().order_by('-created_at').values(
+            'name', 'email', 'mobile', 'user_type', 'trek_category', 'comment', 'created_at'
+        )
+        submissions = []
+        for item in qs:
+            submissions.append({
+                'name':          item['name']          or '',
+                'email':         item['email']         or '',
+                'mobile':        str(item['mobile']    or ''),
+                'user_type':     item['user_type']     or 'other',
+                'trek_category': item['trek_category'] or '',
+                'comment':       item['comment']       or '',
+                # Full ISO datetime so JS can parse date + time
+                'created_at':    item['created_at'].isoformat() if item['created_at'] else '',
+            })
+        extra_context = extra_context or {}
+        extra_context['submissions_json'] = json.dumps(submissions)
+        return super().changelist_view(request, extra_context=extra_context)
+
+
+# ── Blog Admin ──────────────────────────────────────────────────────────────
 class BlogAdminForm(forms.ModelForm):
     image_upload = forms.ImageField(
         required=False,
         help_text="Upload image (stored in Supabase as WebP)"
     )
-
     class Meta:
-        model = Blog
+        model  = Blog
         fields = "__all__"
-        
 
 
 @admin.register(Blog)
 class BlogAdmin(admin.ModelAdmin):
     form = BlogAdminForm
-
-    list_display = ('title', 'author', 'created_at', 'is_featured', 'image_preview')
-    list_filter = ('is_featured', 'created_at')
-    search_fields = ('title', 'content', 'author')
+    list_display       = ('title', 'author', 'created_at', 'is_featured', 'image_preview')
+    list_filter        = ('is_featured', 'created_at')
+    search_fields      = ('title', 'content', 'author')
     prepopulated_fields = {'slug': ('title',)}
-    readonly_fields = ('created_at', 'updated_at', 'image_preview')
-    date_hierarchy = 'created_at'
-
+    readonly_fields    = ('created_at', 'updated_at', 'image_preview')
+    date_hierarchy     = 'created_at'
     fieldsets = (
-        (None, {
-            'fields': ('title', 'slug', 'author', 'is_featured')
-        }),
-        ('Content', {
-            'fields': ('content', 'excerpt')
-        }),
-        ('Image (Supabase)', {
-            'fields': ('image_upload', 'image_preview')
-        }),
-        ('Dates', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
+        (None,             {'fields': ('title', 'slug', 'author', 'is_featured')}),
+        ('Content',        {'fields': ('content', 'excerpt')}),
+        ('Image (Supabase)', {'fields': ('image_upload', 'image_preview')}),
+        ('Dates',          {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)}),
     )
 
     def save_model(self, request, obj, form, change):
         image_file = form.cleaned_data.get('image_upload')
-
         if image_file:
             image_url, original_url = obj.upload_to_supabase(image_file)
-            obj.image_url = image_url
+            obj.image_url         = image_url
             obj.original_image_url = original_url
-
         super().save_model(request, obj, form, change)
 
     def image_preview(self, obj):
         if obj.image_url:
-            return format_html(
-                '<img src="{}" style="max-height:120px; border-radius:8px;" />',
-                obj.image_url
-            )
+            return format_html('<img src="{}" style="max-height:120px;border-radius:8px;" />', obj.image_url)
         return "No image"
-
     image_preview.short_description = "Image Preview"
 
 
+# ── Trek Category ───────────────────────────────────────────────────────────
 @admin.register(TrekCategory)
 class TrekCategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'description')
+    list_display  = ('name', 'description')
     search_fields = ('name', 'description')
 
+
+# ── Trek Image Inline ───────────────────────────────────────────────────────
 class TrekImageInline(admin.TabularInline):
     model = Trek.additional_images.through
     extra = 1
 
+
+# ── Trek Organizer ──────────────────────────────────────────────────────────
 @admin.register(TrekOrganizer)
 class TrekOrganizerAdmin(admin.ModelAdmin):
-    list_display = ('name', 'contact_email', 'contact_phone', 'is_verified', 'logo_preview')
-    list_filter = ('is_verified',)
+    list_display  = ('name', 'contact_email', 'contact_phone', 'is_verified', 'logo_preview')
+    list_filter   = ('is_verified',)
     search_fields = ('name', 'description', 'contact_email')
-    
+
     def logo_preview(self, obj):
         if obj.logo:
             return format_html('<img src="{}" width="50" />', obj.logo.url)
         return "-"
     logo_preview.short_description = 'Logo'
 
+
+# ── Trek ────────────────────────────────────────────────────────────────────
 @admin.register(Trek)
 class TrekAdmin(admin.ModelAdmin):
-    list_display = ('title', 'category', 'organizer', 'difficulty', 'price', 'is_featured', 'image_preview')
-    list_filter = ('category', 'difficulty', 'is_featured', 'created_at')
-    search_fields = ('title', 'description', 'location')
+    list_display        = ('title', 'category', 'organizer', 'difficulty', 'price', 'is_featured', 'image_preview')
+    list_filter         = ('category', 'difficulty', 'is_featured', 'created_at')
+    search_fields       = ('title', 'description', 'location')
     prepopulated_fields = {'slug': ('title',)}
-    readonly_fields = ('created_at', 'updated_at', 'image_preview')
+    readonly_fields     = ('created_at', 'updated_at', 'image_preview')
     fieldsets = (
-        (None, {
-            'fields': ('title', 'slug', 'category', 'organizer', 'is_featured')
-        }),
-        ('Details', {
-            'fields': ('description', 'short_description', 'duration', 'difficulty', 'location')
-        }),
-        ('Pricing', {
-            'fields': ('price', 'discount_price')
-        }),
-        ('Image', {
-            'fields': ('image', 'image_preview')
-        }),
-        ('Dates', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
+        (None,      {'fields': ('title', 'slug', 'category', 'organizer', 'is_featured')}),
+        ('Details', {'fields': ('description', 'short_description', 'duration', 'difficulty', 'location')}),
+        ('Pricing', {'fields': ('price', 'discount_price')}),
+        ('Image',   {'fields': ('image', 'image_preview')}),
+        ('Dates',   {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)}),
     )
-    
+
     def image_preview(self, obj):
         if obj.image:
             return format_html('<img src="{}" width="100" />', obj.image.url)
         return "-"
     image_preview.short_description = 'Image Preview'
 
+
+# ── Trek Image ──────────────────────────────────────────────────────────────
 @admin.register(TrekImage)
 class TrekImageAdmin(admin.ModelAdmin):
-    list_display = ('id', 'caption', 'image_preview')
+    list_display  = ('id', 'caption', 'image_preview')
     search_fields = ('caption',)
-    
+
     def image_preview(self, obj):
         if obj.image:
             return format_html('<img src="{}" width="100" />', obj.image.url)
         return "-"
     image_preview.short_description = 'Image Preview'
 
+
+# ── Testimonial ─────────────────────────────────────────────────────────────
 @admin.register(Testimonial)
 class TestimonialAdmin(admin.ModelAdmin):
-    list_display = ('name', 'trek_display', 'rating', 'date', 'is_featured', 'photo_preview')
-    list_filter = ('rating', 'is_featured', 'date')
+    list_display  = ('name', 'trek_display', 'rating', 'date', 'is_featured', 'photo_preview')
+    list_filter   = ('rating', 'is_featured', 'date')
     search_fields = ('name', 'content', 'trek_name')
     readonly_fields = ('photo_preview',)
-    
+
     def trek_display(self, obj):
         return obj.trek.title if obj.trek else obj.trek_name
     trek_display.short_description = 'Trek'
-    
+
     def photo_preview(self, obj):
         if obj.photo:
             return format_html('<img src="{}" width="50" />', obj.photo.url)
         return "-"
     photo_preview.short_description = 'Photo'
 
+
+# ── FAQ ─────────────────────────────────────────────────────────────────────
 @admin.register(FAQ)
 class FAQAdmin(admin.ModelAdmin):
-    list_display = ('question', 'category', 'order')
-    list_filter = ('category',)
+    list_display  = ('question', 'category', 'order')
+    list_filter   = ('category',)
     search_fields = ('question', 'answer')
     list_editable = ('order',)
 
+
+# ── Safety Tip ──────────────────────────────────────────────────────────────
 @admin.register(SafetyTip)
 class SafetyTipAdmin(admin.ModelAdmin):
-    list_display = ('title', 'order', 'icon_preview')
+    list_display  = ('title', 'order', 'icon_preview')
     search_fields = ('title', 'content')
     list_editable = ('order',)
-    
+
     def icon_preview(self, obj):
         if obj.icon:
             return format_html('<img src="{}" width="30" />', obj.icon.url)
         return "-"
     icon_preview.short_description = 'Icon'
 
+
+# ── Team Member ─────────────────────────────────────────────────────────────
 @admin.register(TeamMember)
 class TeamMemberAdmin(admin.ModelAdmin):
-    list_display = ('name', 'position', 'order', 'photo_preview')
+    list_display  = ('name', 'position', 'order', 'photo_preview')
     search_fields = ('name', 'position', 'bio')
     list_editable = ('order',)
-    
+
     def photo_preview(self, obj):
         if obj.photo:
             return format_html('<img src="{}" width="50" />', obj.photo.url)
         return "-"
     photo_preview.short_description = 'Photo'
 
+
+# ── Homepage Banner ─────────────────────────────────────────────────────────
 @admin.register(HomepageBanner)
 class HomepageBannerAdmin(admin.ModelAdmin):
-    list_display = ('title', 'is_active', 'order', 'image_preview')
-    list_filter = ('is_active',)
+    list_display  = ('title', 'is_active', 'order', 'image_preview')
+    list_filter   = ('is_active',)
     search_fields = ('title', 'subtitle')
     list_editable = ('is_active', 'order')
-    
+
     def image_preview(self, obj):
         if obj.image:
             return format_html('<img src="{}" width="100" />', obj.image.url)
         return "-"
     image_preview.short_description = 'Image Preview'
 
+
+# ── Social Media ────────────────────────────────────────────────────────────
 @admin.register(SocialMedia)
 class SocialMediaAdmin(admin.ModelAdmin):
-    list_display = ('platform', 'url', 'order', 'icon_preview')
+    list_display  = ('platform', 'url', 'order', 'icon_preview')
     search_fields = ('platform',)
     list_editable = ('order',)
-    
+
     def icon_preview(self, obj):
         if obj.icon:
             return format_html('<img src="{}" width="30" />', obj.icon.url)
         return "-"
     icon_preview.short_description = 'Icon'
 
+
+# ── Contact Info ────────────────────────────────────────────────────────────
 @admin.register(ContactInfo)
 class ContactInfoAdmin(admin.ModelAdmin):
-    list_display = ('company_name', 'email', 'phone')
+    list_display  = ('company_name', 'email', 'phone')
     search_fields = ('company_name', 'address', 'email', 'phone')
 
+
+# ── Visitor ─────────────────────────────────────────────────────────────────
 @admin.register(Visitor)
 class VisitorAdmin(admin.ModelAdmin):
-    list_display = ("ip_address", "session_id", "user_agent", "visit_time")
-    list_filter = ("visit_time",)
-    date_hierarchy = "visit_time"
-    search_fields = ("ip_address", "session_id", "user_agent")
+    list_display    = ("ip_address", "session_id", "user_agent", "visit_time")
+    list_filter     = ("visit_time",)
+    date_hierarchy  = "visit_time"
+    search_fields   = ("ip_address", "session_id", "user_agent")
     readonly_fields = ("ip_address", "session_id", "user_agent", "visit_time")
-
     change_list_template = "admin/visitor_changelist.html"
 
     def changelist_view(self, request, extra_context=None):
         from django.db.models.functions import TruncDate
-        today =  timezone.localdate()
-        qs = Visitor.objects.all()
-        total_visitors = qs.count()
+        today = timezone.localdate()
+        qs    = Visitor.objects.all()
+        total_visitors  = qs.count()
         unique_sessions = qs.values("session_id").distinct().count()
-        today_unique = qs.filter(visit_time__date=today).values("session_id").distinct().count()
-        daily_unique = (
+        today_unique    = qs.filter(visit_time__date=today).values("session_id").distinct().count()
+        daily_unique    = (
             qs.annotate(day=TruncDate("visit_time"))
               .values("day")
               .annotate(unique=Count("session_id", distinct=True))
               .order_by("-day")[:14]
         )
         extra = {
-            "total_visitors": total_visitors,
+            "total_visitors":  total_visitors,
             "unique_sessions": unique_sessions,
-            "today_unique": today_unique,
-            "daily_unique": list(daily_unique),
+            "today_unique":    today_unique,
+            "daily_unique":    list(daily_unique),
         }
         extra_context = {**(extra_context or {}), **extra}
         return super().changelist_view(request, extra_context=extra_context)
 
+
+# ── Terms & Conditions ──────────────────────────────────────────────────────
 @admin.register(TermsAndConditions)
 class TermsAndConditionsAdmin(admin.ModelAdmin):
-    list_display = ('title', 'updated_at', 'content_preview')
+    list_display    = ('title', 'updated_at', 'content_preview')
     readonly_fields = ('updated_at',)
 
     def content_preview(self, obj):
-        return mark_safe(obj.content[:100] + '...')  if obj.content else "-"
+        return mark_safe(obj.content[:100] + '...') if obj.content else "-"
     content_preview.short_description = 'Content Preview'
 
+
+# ── Trek List ───────────────────────────────────────────────────────────────
 @admin.register(TrekList)
 class TrekListAdmin(admin.ModelAdmin):
-
     list_display = (
-        'name',
-        'state',
-        'is_pinned',        # 📌
-        'pin_priority',     # 🔢
-        'duration_days',
-        'price_start',
-        'currency',
-        'created_at'
+        'name', 'state', 'is_pinned', 'pin_priority',
+        'duration_days', 'price_start', 'currency', 'created_at'
     )
-
-    list_editable = (
-        'is_pinned',
-        'pin_priority'
-    )
-
-    list_filter = (
-        'state',
-        'currency',
-        'is_pinned',
-        'created_at'
-    )
-
-    ordering = ('pin_priority', '-created_at')
-    search_fields = ('name', 'state', 'short_desc')
+    list_editable  = ('is_pinned', 'pin_priority')
+    list_filter    = ('state', 'currency', 'is_pinned', 'created_at')
+    ordering       = ('pin_priority', '-created_at')
+    search_fields  = ('name', 'state', 'short_desc')
     date_hierarchy = 'created_at'
-
-    readonly_fields = (
-        'id',
-        'created_at',
-        'image_preview',
-        'hero_image_preview'
-    )
-
+    readonly_fields = ('id', 'created_at', 'image_preview', 'hero_image_preview')
     fieldsets = (
-        ("Basic Info", {
-            "fields": ('id', 'name', 'state')
-        }),
-
-        ("📌 Pin Settings", {
-            "fields": ('is_pinned', 'pin_priority'),
-            "description": "Pinned treks appear first based on priority (1 = highest)"
-        }),
-       
-        ("Pricing & Duration", {
-            "fields": ('duration_days', 'price_start', 'currency', 'operating_days')
-        }),
-
-        ("Content", {
-            "fields": ('short_desc', 'activities')
-        }),
-
-        ("Relationships", {
-            "fields": ('tags', 'operators', 'trek_points', 'related_treks')
-        }),
-
-        ("Meta", {
-            "fields": ('created_at',),
-            "classes": ('collapse',)
-        }),
+        ("Basic Info",       {"fields": ('id', 'name', 'state')}),
+        ("📌 Pin Settings",  {"fields": ('is_pinned', 'pin_priority'),
+                              "description": "Pinned treks appear first based on priority (1 = highest)"}),
+        ("Pricing & Duration", {"fields": ('duration_days', 'price_start', 'currency', 'operating_days')}),
+        ("Content",          {"fields": ('short_desc', 'activities')}),
+        ("Relationships",    {"fields": ('tags', 'operators', 'trek_points', 'related_treks')}),
+        ("Meta",             {"fields": ('created_at',), "classes": ('collapse',)}),
     )
-
     filter_horizontal = ('tags', 'operators', 'trek_points', 'related_treks')
 
     def image_preview(self, obj):
         if obj.image:
             return format_html('<img src="{}" width="120" />', obj.image)
         return "No image"
+    image_preview.short_description = "Image Preview"
 
     def hero_image_preview(self, obj):
         if obj.hero_image:
             return format_html('<img src="{}" width="200" />', obj.hero_image)
         return "No hero image"
-
-    image_preview.short_description = "Image Preview"
     hero_image_preview.short_description = "Hero Image Preview"
 
     def save_model(self, request, obj, form, change):
@@ -359,15 +361,15 @@ class TrekListAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
-
+# ── Operator / Tag / Trek Point ─────────────────────────────────────────────
 @admin.register(Operator)
 class OperatorAdmin(admin.ModelAdmin):
-    list_display = ('name',)
+    list_display  = ('name',)
     search_fields = ('name',)
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ('name',)
+    list_display  = ('name',)
     search_fields = ('name',)
 
 @admin.register(TrekPoint)
@@ -375,10 +377,11 @@ class TrekPointAdmin(admin.ModelAdmin):
     list_display = ('name',)
     search_fields = ('name',)
 
+
 @admin.register(SearchLog)
 class SearchLogAdmin(admin.ModelAdmin):
     list_display = ('query', 'tag', 'trek', 'ip_address', 'searched_at')
-    list_filter = ('tag',)  # Keep tag filtering working on the right sidebar
+    list_filter = ('tag',)
     search_fields = ('query', 'tag')
     readonly_fields = ('query', 'tag', 'trek', 'ip_address', 'searched_at')
     ordering = ('-searched_at',)
@@ -390,8 +393,7 @@ class SearchLogAdmin(admin.ModelAdmin):
         without crashing Django Admin's validation loop.
         """
         qs = super().get_queryset(request)
-        
-        # Read period from request (or fallback to your saved state attribute)
+
         period = request.GET.get('period') or getattr(self, '_current_period', '30days')
         now = timezone.now()
 
@@ -403,6 +405,7 @@ class SearchLogAdmin(admin.ModelAdmin):
             qs = qs.filter(searched_at__gte=now - timedelta(days=30))
         elif period == 'year':
             qs = qs.filter(searched_at__year=now.year)
+
         elif period == 'custom_year':
             year = request.GET.get('year')
             if year and year.isdigit():
@@ -412,13 +415,15 @@ class SearchLogAdmin(admin.ModelAdmin):
 
     def changelist_view(self, request, extra_context=None):
         period = request.GET.get('period', '30days')
+
         self._current_period = period  
         selected_year = request.GET.get('year', '')
         available_years = [d.year for d in SearchLog.objects.dates('searched_at', 'year', order='DESC')]
+
+
         qs = self.get_queryset(request)
         total_searches = qs.count()
 
-        # ✅ 1. Aggregate Top Treks for the Bar Chart distribution
         top_treks_chart_qs = list(
             qs.exclude(trek=None)
             .values('trek__name')
@@ -426,7 +431,6 @@ class SearchLogAdmin(admin.ModelAdmin):
             .order_by('-count')[:8]
         )
 
-        # 2. Keep individual card metric counters unchanged
         top_tags_qs = list(
             qs.exclude(tag='')
             .values('tag')
@@ -455,7 +459,6 @@ class SearchLogAdmin(admin.ModelAdmin):
         top_trek = top_treks_qs[0]['trek__name'] if top_treks_qs else '-'
         top_trek_count = top_treks_qs[0]['count'] if top_treks_qs else 0
 
-        # ✅ 3. Update variables sent to Chart.js backend context
         extra = {
             'period': period,
             'selected_year': selected_year,
@@ -467,15 +470,14 @@ class SearchLogAdmin(admin.ModelAdmin):
             'top_tag_count': top_tag_count,
             'top_trek': top_trek,
             'top_trek_count': top_trek_count,
-            # Pointing both chart parameters directly to Trek name aggregates
             'top_queries_labels': json.dumps([t['trek__name'] for t in top_treks_chart_qs]),
             'top_queries_data': json.dumps([t['count'] for t in top_treks_chart_qs]),
             'top_tags_labels': json.dumps([t['tag'] for t in top_tags_qs]),
             'top_tags_data': json.dumps([t['count'] for t in top_tags_qs]),
         }
+
         extra_context = {**(extra_context or {}), **extra}
 
-        # Keep safe parameters for custom frontend queries
         request.GET = request.GET.copy()
         if 'period' in request.GET:
             request.GET.pop('period')

@@ -10,7 +10,7 @@ export default function Navbar() {
 
   return (
     <nav className="navbar navbar-expand-lg navbar-light bg-light sticky-top">
-      <div className="container-fluid px-3 px-lg-5">
+      <div className="container-fluid p-0 px-3 px-lg-5">
         <Link className="navbar-brand" to="/" onClick={closeMenu}>
           <img src="/images/updated_logo.webp" alt="Aorbo" className="nav-logo" height="50" />
         </Link>

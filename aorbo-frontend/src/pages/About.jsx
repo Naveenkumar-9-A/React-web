@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import '../styles/About.css'; // 🎯 Links directly to your clean external styles sheet
 
 export default function About() {

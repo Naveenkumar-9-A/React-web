@@ -21,6 +21,7 @@ ALLOWED_HOSTS = config(
     default='localhost,127.0.0.1,16.170.247.251',
     cast=lambda x: [i.strip() for i in x.split(',')]
 )
+
 CSRF_TRUSTED_ORIGINS = [
     "https://aorbotreks.com",
     "https://www.aorbotreks.com",
@@ -30,27 +31,27 @@ if DEBUG:
     CSRF_TRUSTED_ORIGINS += [
         "http://localhost:8000",
         "http://127.0.0.1:8000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
     ]
 
 # HSTS prevents downgrade attacks, X-Frame prevents clickjacking, etc.
-SECURE_HSTS_SECONDS = 31536000  # 1 year HSTS preload
+SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
-SECURE_CONTENT_TYPE_NOSNIFF = True  # Prevent MIME type sniffing (XSS)
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')  # For reverse proxies
-REFERRER_POLICY = 'strict-origin-when-cross-origin'  # Prevent referrer leakage
-X_FRAME_OPTIONS = 'DENY'  # Prevent clickjacking (framing in iframes)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+REFERRER_POLICY = 'strict-origin-when-cross-origin'
+X_FRAME_OPTIONS = 'DENY'
 
-# In production (DEBUG=False), enforce HTTPS and secure cookies
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
-# SECURITY FIX: Session and CSRF cookie hardening
-SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript/XSS access to session cookie
-SESSION_COOKIE_SAMESITE = 'Strict'  # Prevent CSRF via cookies
-CSRF_COOKIE_HTTPONLY = True  # Prevent JavaScript access to CSRF token
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Strict'
+CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Strict'
 
 INSTALLED_APPS = [
@@ -70,7 +71,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # 👈 Moved to the absolute top!
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -81,7 +82,10 @@ MIDDLEWARE = [
     'csp.middleware.CSPMiddleware',
     'axes.middleware.AxesMiddleware',
 ]
-CORS_ALLOW_ALL_ORIGINS = True
+
+# CORS
+CORS_ORIGIN_ALLOW_ALL = False
+
 CORS_ALLOWED_ORIGINS = [
     "https://aorbotreks.com",
     "https://www.aorbotreks.com",
@@ -91,9 +95,12 @@ if DEBUG:
     CORS_ALLOWED_ORIGINS += [
         "http://localhost:8000",
         "http://127.0.0.1:8000",
-        "http://localhost:5173",    
-        "http://127.0.0.1:5173",    
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
     ]
+
+CORS_ALLOW_CREDENTIALS = False
+
 # Rate limiting with django-axes
 AXES_FAILURE_LIMIT = 5
 AXES_COOLOFF_TIME = 1
@@ -134,7 +141,6 @@ DATABASES = {
     }
 }
 
-# SSL for production
 if not DEBUG and 'runserver' not in sys.argv:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
@@ -147,18 +153,10 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
 PASSWORD_RESET_FORM = 'treks_app.forms.CustomPasswordResetForm'
@@ -194,23 +192,6 @@ CACHES = {
     }
 }
 
-
-# Localhost should only be in DEBUG mode for local development
-CORS_ORIGIN_ALLOW_ALL = False
-
-CORS_ALLOWED_ORIGINS = [
-    "https://aorbotreks.com",
-    "https://www.aorbotreks.com",
-]
-
-if DEBUG:
-    CORS_ALLOWED_ORIGINS += [
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-    ]
-
-CORS_ALLOW_CREDENTIALS = False
-
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -220,8 +201,10 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle'
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/day',
-        'user': '1000/day'
+        # DEBUG mode: Relaxed limits for development
+        # PRODUCTION mode: Strict limits for security
+        'anon': '10000/hour' if DEBUG else '100/hour',  # 10,000/hour in DEBUG, 100/hour in production
+        'user': '50000/hour' if DEBUG else '1000/hour'  # 50,000/hour in DEBUG, 1,000/hour in production
     }
 }
 
@@ -234,11 +217,15 @@ CONTENT_SECURITY_POLICY = {
             'https://www.aorbotreks.com',
             'https://www.google.com',
             'https://www.gstatic.com',
-            'https://www.google-analytics.com',  # Google Analytics data collection
-            'https://cdn.jsdelivr.net', 
+
+            'https://www.google-analytics.com',
+            'https://cdn.jsdelivr.net',
             'https://cdnjs.cloudflare.com',
-            'http://localhost:5173',    
+            'http://localhost:5173',
+
             'http://127.0.0.1:5173',
+            'http://localhost:8000',
+            'http://127.0.0.1:8000',
         ),
         'default-src': (
             "'self'",
@@ -248,13 +235,15 @@ CONTENT_SECURITY_POLICY = {
             'https://cdnjs.cloudflare.com',
             'https://aorbotreks.com',
             'https://www.aorbotreks.com',
-            'http://localhost:5173',    
+            'http://localhost:5173',
             'http://127.0.0.1:5173',
+            'http://localhost:8000',
+            'http://127.0.0.1:8000',
         ),
         'font-src': (
             "'self'",
             'https://fonts.gstatic.com',
-            'https://cdn.jsdelivr.net',  # Bootstrap Icons fonts
+            'https://cdn.jsdelivr.net',
             'https://aorbotreks.com',
             'https://www.aorbotreks.com',
         ),
@@ -271,33 +260,37 @@ CONTENT_SECURITY_POLICY = {
             'https://www.aorbotreks.com',
             "https://xsconhhzyaiowokwsqne.supabase.co",
             'https://www.gstatic.com',
+            'http://localhost:8000',
+            'http://127.0.0.1:8000',
+            'http://localhost:5173',
+            'http://127.0.0.1:5173',
         ),
         'object-src': ("'none'",),
         'script-src': (
             "'self'",
-            "'unsafe-inline'",  # Temporary: For inline event handlers (refactor onclick to addEventListener for production)
+            "'unsafe-inline'",
             'https://cdn.jsdelivr.net',
             'https://cdnjs.cloudflare.com',
             'https://www.google.com',
             'https://www.gstatic.com',
-            'https://www.googletagmanager.com',  # Google Analytics
+            'https://www.googletagmanager.com',
             'https://aorbotreks.com',
             'https://www.aorbotreks.com',
         ),
         'script-src-elem': (
             "'self'",
-            "'unsafe-inline'",  # Required for CKEditor and Django admin inline scripts
+            "'unsafe-inline'",
             'https://cdn.jsdelivr.net',
             'https://cdnjs.cloudflare.com',
             'https://www.google.com',
             'https://www.gstatic.com',
-            'https://www.googletagmanager.com',  # Google Analytics
+            'https://www.googletagmanager.com',
             'https://aorbotreks.com',
             'https://www.aorbotreks.com',
         ),
         'style-src': (
             "'self'",
-            "'unsafe-inline'",  # Temporary: Allows inline <style> tags (refactor to external CSS for production)
+            "'unsafe-inline'",
             'https://fonts.googleapis.com',
             'https://cdn.jsdelivr.net',
             'https://www.gstatic.com',
@@ -307,19 +300,16 @@ CONTENT_SECURITY_POLICY = {
     }
 }
 
-
-
 if DEBUG:
-    # Allow localhost for development only
     for directive in ["script-src", "style-src", "img-src", "font-src", "connect-src"]:
         if directive in CONTENT_SECURITY_POLICY["DIRECTIVES"]:
-            CONTENT_SECURITY_POLICY["DIRECTIVES"][directive] += ("http://localhost:8000",)
+            CONTENT_SECURITY_POLICY["DIRECTIVES"][directive] += (
+                "http://localhost:8000",
+                "http://127.0.0.1:8000",
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+            )
 
 SIMPLE_JWT = {
     'TOKEN_OBTAIN_PAIR_SERIALIZER': 'aorbo_project.serializers.MyTokenObtainPairSerializer',
-}
-
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [],
-    'DEFAULT_PERMISSION_CLASSES': [],
 }

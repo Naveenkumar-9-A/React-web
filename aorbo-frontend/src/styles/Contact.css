@@ -1,4 +1,5 @@
 
+
 :root {
   --text-dark: #1e293b;
   --text-muted: #475569;
@@ -371,5 +372,40 @@
   }
   .contact-image {
     max-width: 95%;
+  }
+}
+
+.contact-toast {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 9999;
+  padding: 14px 22px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  animation: slideInToast 0.3s ease;
+}
+
+.contact-toast--success {
+  background: #1a7a4a;
+  color: #fff;
+}
+
+.contact-toast--error {
+  background: #b91c1c;
+  color: #fff;
+}
+
+@keyframes slideInToast {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

@@ -16,12 +16,14 @@ const BACKEND_URL = 'http://127.0.0.1:8000';
 
   const fetchBlogs = async (page = 1) => {
     try {
-const res = await fetch(`${BACKEND_URL}/api/blogs/?page=${page}`);
+      const res = await fetch(`${BACKEND_URL}/api/blogs/?page=${page}`);
       const data = await res.json();
       setBlogs(data.results || []);
       setTotalPages(data.total_pages || 1);
     } catch (err) {
       console.error('Failed to fetch blogs', err);
+      setBlogs([]);
+      setTotalPages(1);
     }
   };
 
@@ -39,7 +41,7 @@ const res = await fetch(`${BACKEND_URL}/api/blogs/?page=${page}`);
             <div className="blog-card" key={blog.slug}>
               <div className="blog-image">
                 <Link to={`/blogs/${blog.slug}`}>
-                  <img src={blog.image_url} alt={blog.title} />
+                  <img src={blog.image_url || '/images/placeholder-trek.jpg'} alt={blog.title} />
                 </Link>
               </div>
               <div className="blog-content">

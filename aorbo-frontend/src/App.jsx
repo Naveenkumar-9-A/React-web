@@ -17,6 +17,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import UserAgreement from './pages/UserAgreement';
 import CardDetails from './pages/CardDetails';
 import TravelYourWay from './pages/TravelYourWay';
+import DestinationDetails from './pages/DestinationDetails';
 
 export default function App() {
   return (
@@ -35,9 +36,10 @@ export default function App() {
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/user-agreement" element={<UserAgreement />} />
-<Route path="/treks/:id" element={<CardDetails key={window.location.pathname} />} />   
-<Route path="/treks/:id/details" element={<CardDetails />} />
-     <Route path="/travel-your-way" element={<TravelYourWay />} />
+        <Route path="/treks/:id" element={<CardDetails key={window.location.pathname} />} />   
+        <Route path="/treks/:id/details" element={<CardDetails />} />
+        <Route path="/destination/:slug" element={<DestinationDetails />} />
+        <Route path="/travel-your-way" element={<TravelYourWay />} />
       </Routes>
 
       {/* Dynamic Global Footer */}

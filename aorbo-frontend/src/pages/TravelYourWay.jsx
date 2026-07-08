@@ -14,18 +14,19 @@ const TAG_META = {
 
 // Cache keyed by "tag__page" e.g. "adventure__1"
 const trekCache = {};
-const inFlight  = new Set();
-const SKELETON_COUNT = 12;
+const inFlight = new Set();
+const SKELETON_COUNT = 8;
+const ITEMS_PER_PAGE = 8;
 
 export default function TravelYourWay() {
-  const [searchParams]  = useSearchParams();
-  const [treks, setTreks]           = useState([]);
-  const [loading, setLoading]       = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [treks, setTreks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const abortRef = useRef(null);
 
   const selectedTag  = (searchParams.get('tag')  || 'adventure').toLowerCase();
-  const currentPage  = parseInt(searchParams.get('page') || '1', 10);
   const BACKEND_URL  = 'http://127.0.0.1:8000';
 
   const cacheKey = `${selectedTag}__${currentPage}`;
@@ -36,7 +37,15 @@ export default function TravelYourWay() {
     subtitle: 'Showing treks and trips that match your travel style.',
   };
 
+
+  // Reset to page 1 when tag changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedTag]);
+
+
   // ── Main fetch ──
+
   useEffect(() => {
     if (trekCache[cacheKey]) {
       setTreks(trekCache[cacheKey].results);
@@ -129,6 +138,9 @@ export default function TravelYourWay() {
     });
   };
 
+  // Pagination logic
+
+
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
 
@@ -186,6 +198,8 @@ export default function TravelYourWay() {
             </div>
 
           ) : treks.length > 0 ? (
+
+            /* ── REAL CARDS ── */
             <>
               <div className="row g-4">
                 {treks.map((trek) => {
@@ -198,7 +212,11 @@ export default function TravelYourWay() {
 
                   return (
                     <div key={trek.id} className="col-12 col-sm-6 col-md-4 col-lg-3">
-                      <Link to={`/treks/${trek.id}`} className="text-decoration-none d-block h-100" onClick={() => handleTrekClick(trek)}>
+                        <Link
+                            to={`/treks/${trek.id}`}
+                            onClick={() => handleTrekClick(trek)}
+                            className="text-decoration-none d-block h-100"
+                        >
                         <div className="bolt-premium-card">
                           <div className="bolt-shine" />
                           <div className="bolt-top-glow" />
@@ -256,36 +274,41 @@ export default function TravelYourWay() {
                 })}
               </div>
 
-              {/* ── PAGINATION ── */}
-              {totalPages > 1 && (
-                <div className="bolt-pagination-wrapper">
-                  <Link
-                    to={currentPage > 1 ? getPageUrl(currentPage - 1) : '#'}
-                    className={`bolt-pag-btn ${currentPage === 1 ? 'bolt-pag-disabled' : ''}`}
-                  >
-                    <ChevronLeft style={{ width: '16px', height: '16px' }} />
-                  </Link>
 
-                  {getPaginationPages().map((page, i) =>
-                    page === '...' ? (
-                      <span key={`ell-${i}`} className="bolt-pag-ellipsis">···</span>
-                    ) : (
-                      <Link
-                        key={page}
-                        to={getPageUrl(page)}
-                        className={`bolt-pag-btn ${page === currentPage ? 'bolt-pag-active' : ''}`}
-                      >
-                        {page}
-                      </Link>
-                    )
-                  )}
+              {/* Pagination Controls */}
+{totalPages > 1 && (
+  <div className="bolt-pagination-wrapper" style={{ marginTop: '3rem' }}>
+    <button
+      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+      disabled={currentPage === 1}
+      className={`bolt-pag-btn ${currentPage === 1 ? 'bolt-pag-disabled' : ''}`}
+    >
+      <ChevronLeft style={{ width: '16px', height: '16px' }} />
+    </button>
 
-                  <Link
-                    to={currentPage < totalPages ? getPageUrl(currentPage + 1) : '#'}
-                    className={`bolt-pag-btn ${currentPage === totalPages ? 'bolt-pag-disabled' : ''}`}
-                  >
-                    <ChevronRight style={{ width: '16px', height: '16px' }} />
-                  </Link>
+                  {getPaginationPages().map((page, index) =>
+  page === '...' ? (
+    <span key={`ellipsis-${index}`} className="bolt-pag-ellipsis">
+      ...
+    </span>
+  ) : (
+    <button
+      key={page}
+      onClick={() => setCurrentPage(page)}
+      className={`bolt-pag-btn ${page === currentPage ? 'bolt-pag-active' : ''}`}
+    >
+      {page}
+    </button>
+  )
+)}
+
+<button
+  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+  disabled={currentPage === totalPages}
+  className={`bolt-pag-btn ${currentPage === totalPages ? 'bolt-pag-disabled' : ''}`}
+>
+  <ChevronRight style={{ width: '16px', height: '16px' }} />
+</button>
                 </div>
               )}
             </>
