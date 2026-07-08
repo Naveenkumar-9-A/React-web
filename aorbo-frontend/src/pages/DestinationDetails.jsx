@@ -154,9 +154,9 @@ export default function DestinationDetails() {
             {destination.best_time_to_visit && (
               <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>📅 {destination.best_time_to_visit}</span>
             )}
-            <span style={{ background: yellow, color: '#1a1a1a', fontSize: '13px', fontWeight: '700', padding: '5px 14px', borderRadius: '999px', marginLeft: 'auto' }}>
+            {/*<span style={{ background: yellow, color: '#1a1a1a', fontSize: '13px', fontWeight: '700', padding: '5px 14px', borderRadius: '999px', marginLeft: 'auto' }}>
               ₹{estimatedPrice} onwards
-            </span>
+            </span>*/}
           </div>
         </div>
       </div>
@@ -245,7 +245,7 @@ export default function DestinationDetails() {
         {/* RIGHT COLUMN */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {/* PRICE CARD */}
-          <div style={{ background: darkGreen, borderRadius: '16px', padding: '1.5rem', color: '#fff' }}>
+          {/*<div style={{ background: darkGreen, borderRadius: '16px', padding: '1.5rem', color: '#fff' }}>
             <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', margin: '0 0 0.25rem' }}>Estimated Package Price</p>
             <p style={{ fontSize: '2rem', fontWeight: '700', color: yellow, margin: '0 0 0.25rem', lineHeight: 1 }}>₹{estimatedPrice}</p>
             <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', margin: '0 0 1.25rem' }}>per person onwards*</p>
@@ -271,7 +271,7 @@ export default function DestinationDetails() {
             >
               📋 Book Now
             </button>
-          </div>
+          </div>*/}
 
           {/* TRIP INFORMATION */}
           <div style={{ background: yellowLight, border: `1px solid ${yellowBorder}`, borderRadius: '16px', padding: '1.25rem' }}>
@@ -295,7 +295,7 @@ export default function DestinationDetails() {
           </div>
 
           {/* PRICE RULES */}
-          <div style={{ background: '#FFF3CD', border: '1px solid #FFEAA7', borderRadius: '16px', padding: '1.25rem' }}>
+          {/*<div style={{ background: '#FFF3CD', border: '1px solid #FFEAA7', borderRadius: '16px', padding: '1.25rem' }}>
             <h3 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 0.75rem', color: '#856404' }}>💰 Price Rules</h3>
             <ul style={{ margin: 0, paddingLeft: '1.5rem', color: '#856404', fontSize: '12px' }}>
               <li style={{ marginBottom: '0.35rem' }}>Minimum price: ₹1000 per person</li>
@@ -303,7 +303,7 @@ export default function DestinationDetails() {
               <li style={{ marginBottom: '0.35rem' }}>Moderate destinations: ₹1500+</li>
               <li>Difficult / Remote journeys: ₹2500+</li>
             </ul>
-          </div>
+          </div>*/}
 
           {/* ACCOMMODATION */}
           {destination.accommodation && (
