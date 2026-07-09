@@ -373,7 +373,7 @@ class TrekListAdmin(admin.ModelAdmin):
         'duration_days', 'price_start', 'currency', 'is_ai_generated', 'created_at'
     )
     list_editable  = ('is_pinned', 'pin_priority')
-    list_filter    = ('state', 'currency', 'is_pinned', 'created_at')
+    list_filter    = ('state', 'currency', 'is_pinned', 'created_at' , 'is_ai_generated')
     ordering       = ('pin_priority', '-created_at')
     search_fields  = ('name', 'state', 'short_desc')
     date_hierarchy = 'created_at'

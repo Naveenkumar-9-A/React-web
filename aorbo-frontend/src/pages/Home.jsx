@@ -141,8 +141,20 @@ const handleSearchInput = (e) => {
         type: 'osm',
       }));
 
-      setSuggestions(osmSuggestions);
-      setShowSuggestions(osmSuggestions.length > 0);
+      if (osmSuggestions.length > 0) {
+        setSuggestions(osmSuggestions);
+        setShowSuggestions(true);
+      } else {
+        setSuggestions([
+          {
+            id: "no-results",
+            type: "no-results",
+            message: "No trekking destinations found"
+          }
+        ]);
+
+        setShowSuggestions(true);
+      }
     } catch (err) {
       console.error('Search error:', err);
       setSuggestions([]);
@@ -154,32 +166,62 @@ const handleSearchInput = (e) => {
 
     if (!searchQuery.trim()) return;
 
+    // Don't navigate if there are no trekking results
+    if (
+        suggestions.length === 1 &&
+        suggestions[0].type === "no-results"
+    ) {
+        return;
+    }
+
     if (suggestions.length > 0) {
         const first = suggestions[0];
 
-        fetch(`${BACKEND_URL}/api/treks/log-click/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                trek_id: first.id,
-                query: searchQuery,
-            }),
-        }).catch(() => {});
+        // Existing Trek
+        if (first.type !== "osm") {
+            fetch(`${BACKEND_URL}/api/treks/log-click/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    trek_id: first.id,
+                    query: searchQuery,
+                }),
+            }).catch(() => {});
 
-        navigate(`/treks/${first.id}`);
+            navigate(`/treks/${first.id}`);
+            setShowSuggestions(false);
+            return;
+        }
+
+        // OpenStreetMap Trek
+        const slug = generateSlug(first.name);
+
+        navigate(`/destination/${slug}`, {
+            state: {
+                destination: first,
+            },
+        });
+
         setShowSuggestions(false);
         return;
     }
 
-    navigate(`/travel-your-way?q=${encodeURIComponent(searchQuery)}`);
+    // Do nothing
+    return;
 };
 
 const handleSuggestionClick = (suggestion) => {
+  if (suggestion.type === "no-results") {
+  return;
+}
+  // ✅ Log click (only if backend is available)
   fetch(`${BACKEND_URL}/api/treks/log-click/`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({
       trek_id: suggestion.id || null,
       query: searchQuery,
@@ -187,30 +229,12 @@ const handleSuggestionClick = (suggestion) => {
     }),
   }).catch((err) => console.log("Click log failed:", err));
 
+  // ✅ Navigate based on suggestion type
   if (suggestion.type === 'osm') {
-    // Automatically create a draft trek from this OSM result, then go straight to CardDetails
-    fetch(`${BACKEND_URL}/api/treks/create-from-osm/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: suggestion.name,
-        display_name: suggestion.display_name,
-        lat: suggestion.lat,
-        lon: suggestion.lon,
-      }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.trek_id) {
-          navigate(`/treks/${data.trek_id}`);
-        } else {
-          // fallback if creation failed for some reason
-          navigate('/treks/osm-destination', { state: { destination: suggestion } });
-        }
-      })
-      .catch(() => {
-        navigate('/treks/osm-destination', { state: { destination: suggestion } });
-      });
+    const slug = generateSlug(suggestion.name);
+    navigate(`/destination/${slug}`, {
+      state: { destination: suggestion },
+    });
   } else {
     navigate(`/treks/${suggestion.id}`);
   }
@@ -218,6 +242,7 @@ const handleSuggestionClick = (suggestion) => {
   setShowSuggestions(false);
   setSearchQuery('');
 };
+
 // ✅ Handle tag click (from main branch)
 const handleTagClick = (tag) => {
   fetch(`${BACKEND_URL}/api/treks/log-click/`, {
@@ -344,37 +369,65 @@ const handleTagClick = (tag) => {
                   </svg>
                 </button>
                 {showSuggestions && suggestions.length > 0 && (
-                  <div id="search-suggestions" className="search-suggestions" style={{ display: 'block' }}>
-                    {suggestions.map((suggestion) => (
-                      <div
-                        key={`${suggestion.type || 'trek'}-${suggestion.id}`}
-                        className="search-suggestion-item"
-                        onClick={() => handleSuggestionClick(suggestion)}
-                        style={{ cursor: 'pointer', padding: '10px 12px', borderBottom: '1px solid #eee' }}
-                      >
-                        {suggestion.type === 'osm' ? (
-                          <>
-                            <span className="search-suggestion-main">
-                              📍 {suggestion.name}
-                            </span>
-                            <span className="search-suggestion-secondary">
-                              {suggestion.display_name?.substring(0, 60)}...
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="search-suggestion-main">
-                              🏔️ {suggestion.label || suggestion.name}
-                            </span>
-                            <span className="search-suggestion-secondary">
-                              {suggestion.state || 'Trek'}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+  <div
+    id="search-suggestions"
+    className="search-suggestions"
+    style={{ display: "block" }}
+  >
+    {suggestions.map((suggestion) => {
+
+      if (suggestion.type === "no-results") {
+        return (
+          <div
+            key="no-results"
+            className="search-suggestion-item"
+            style={{
+              padding: "14px",
+              textAlign: "center",
+              color: "#666",
+              cursor: "default"
+            }}
+          >
+            ❌ No trekking destinations found
+          </div>
+        );
+      }
+
+      return (
+        <div
+          key={`${suggestion.type || "trek"}-${suggestion.id}`}
+          className="search-suggestion-item"
+          onClick={() => handleSuggestionClick(suggestion)}
+          style={{
+            cursor: "pointer",
+            padding: "10px 12px",
+            borderBottom: "1px solid #eee"
+          }}
+        >
+          {suggestion.type === "osm" ? (
+            <>
+              <span className="search-suggestion-main">
+                📍 {suggestion.name}
+              </span>
+              <span className="search-suggestion-secondary">
+                {suggestion.display_name?.substring(0, 60)}...
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="search-suggestion-main">
+                🏔️ {suggestion.label || suggestion.name}
+              </span>
+              <span className="search-suggestion-secondary">
+                {suggestion.state || "Trek"}
+              </span>
+            </>
+          )}
+        </div>
+      );
+    })}
+  </div>
+)}
               </div>
             </form>
 
