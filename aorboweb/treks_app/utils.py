@@ -444,7 +444,7 @@ def search_osm_multiple_queries(query):
                 "User-Agent": "AorboTreks/1.0 (Trek Mapping Service)"
             }
 
-            response = requests.get(url, params=params, headers=headers, timeout=5)
+            response = requests.get(url, params=params, headers=headers, timeout=3)
             response.raise_for_status()
 
             results = response.json()
