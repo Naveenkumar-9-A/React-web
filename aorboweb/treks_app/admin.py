@@ -4,8 +4,8 @@ from django.db.models import Count
 from django.utils import timezone
 from datetime import timedelta
 from django.utils.safestring import mark_safe
-from django.http import HttpResponseRedirect
-from django.urls import reverse
+from django.http import HttpResponseRedirect, JsonResponse
+from django.urls import reverse, path
 import supabase
 from django import forms
 
@@ -46,36 +46,82 @@ class ContactDateRangeFilter(admin.SimpleListFilter):
             return queryset.filter(created_at__year=now.year)
         return queryset
 
-
 # ── Contact Admin ───────────────────────────────────────────────────────────
 @admin.register(Contact)
 class ContactAdmin(admin.ModelAdmin):
-    list_display   = ('name', 'email', 'mobile', 'user_type', 'trek_category', 'created_at')
-    list_filter    = ('user_type', 'trek_category', ContactDateRangeFilter)
+    list_display   = ('name', 'email', 'mobile', 'user_type', 'trek_category', 'created_at', 'is_deleted')
+    list_filter    = ('user_type', 'trek_category', 'is_deleted', ContactDateRangeFilter)
     search_fields  = ('name', 'email', 'mobile', 'comment')
-    readonly_fields = ('created_at',)
+    readonly_fields = ('created_at', 'deleted_at')
     date_hierarchy = 'created_at'
     change_list_template = "admin/contact_filter.html"
+    actions = ["delete_selected"]
 
     def changelist_view(self, request, extra_context=None):
         qs = Contact.objects.all().order_by('-created_at').values(
-            'name', 'email', 'mobile', 'user_type', 'trek_category', 'comment', 'created_at'
+            'id', 'name', 'email', 'mobile', 'user_type', 'trek_category',
+            'comment', 'created_at', 'is_deleted', 'deleted_at'
         )
         submissions = []
         for item in qs:
             submissions.append({
+                'id':            item['id'],
                 'name':          item['name']          or '',
                 'email':         item['email']         or '',
                 'mobile':        str(item['mobile']    or ''),
                 'user_type':     item['user_type']     or 'other',
                 'trek_category': item['trek_category'] or '',
                 'comment':       item['comment']       or '',
-                # Full ISO datetime so JS can parse date + time
                 'created_at':    item['created_at'].isoformat() if item['created_at'] else '',
+                'is_deleted':    item['is_deleted'],
+                'deleted_at':    item['deleted_at'].isoformat() if item['deleted_at'] else '',
             })
         extra_context = extra_context or {}
         extra_context['submissions_json'] = json.dumps(submissions)
         return super().changelist_view(request, extra_context=extra_context)
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('soft-delete/', self.admin_site.admin_view(self.soft_delete_view), name='contact_soft_delete'),
+            path('restore/', self.admin_site.admin_view(self.restore_view), name='contact_restore'),
+            path('permanent-delete/', self.admin_site.admin_view(self.permanent_delete_view), name='contact_permanent_delete'),
+        ]
+        return custom_urls + urls
+
+    def _get_ids_from_request(self, request):
+        try:
+            payload = json.loads(request.body or '{}')
+            return [int(i) for i in payload.get('ids', [])]
+        except (ValueError, TypeError):
+            return []
+
+    def soft_delete_view(self, request):
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+        if not self.has_delete_permission(request):
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        ids = self._get_ids_from_request(request)
+        updated = Contact.objects.filter(id__in=ids).update(is_deleted=True, deleted_at=timezone.now())
+        return JsonResponse({'success': True, 'count': updated})
+
+    def restore_view(self, request):
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+        if not self.has_delete_permission(request):
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        ids = self._get_ids_from_request(request)
+        updated = Contact.objects.filter(id__in=ids).update(is_deleted=False, deleted_at=None)
+        return JsonResponse({'success': True, 'count': updated})
+
+    def permanent_delete_view(self, request):
+        if request.method != 'POST':
+            return JsonResponse({'error': 'POST required'}, status=405)
+        if not self.has_delete_permission(request):
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        ids = self._get_ids_from_request(request)
+        deleted_count, _ = Contact.objects.filter(id__in=ids, is_deleted=True).delete()
+        return JsonResponse({'success': True, 'count': deleted_count})
 
 
 # ── Blog Admin ──────────────────────────────────────────────────────────────
