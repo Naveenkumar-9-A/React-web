@@ -177,12 +177,9 @@ const handleSearchInput = (e) => {
 };
 
 const handleSuggestionClick = (suggestion) => {
-  // ✅ Log click (only if backend is available)
   fetch(`${BACKEND_URL}/api/treks/log-click/`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       trek_id: suggestion.id || null,
       query: searchQuery,
@@ -190,12 +187,30 @@ const handleSuggestionClick = (suggestion) => {
     }),
   }).catch((err) => console.log("Click log failed:", err));
 
-  // ✅ Navigate based on suggestion type
   if (suggestion.type === 'osm') {
-    const slug = generateSlug(suggestion.name);
-    navigate(`/destination/${slug}`, {
-      state: { destination: suggestion },
-    });
+    // Automatically create a draft trek from this OSM result, then go straight to CardDetails
+    fetch(`${BACKEND_URL}/api/treks/create-from-osm/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: suggestion.name,
+        display_name: suggestion.display_name,
+        lat: suggestion.lat,
+        lon: suggestion.lon,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.trek_id) {
+          navigate(`/treks/${data.trek_id}`);
+        } else {
+          // fallback if creation failed for some reason
+          navigate('/treks/osm-destination', { state: { destination: suggestion } });
+        }
+      })
+      .catch(() => {
+        navigate('/treks/osm-destination', { state: { destination: suggestion } });
+      });
   } else {
     navigate(`/treks/${suggestion.id}`);
   }
@@ -203,7 +218,6 @@ const handleSuggestionClick = (suggestion) => {
   setShowSuggestions(false);
   setSearchQuery('');
 };
-
 // ✅ Handle tag click (from main branch)
 const handleTagClick = (tag) => {
   fetch(`${BACKEND_URL}/api/treks/log-click/`, {

@@ -10,7 +10,7 @@ from django.template.loader import render_to_string
 from django.db.models import Q, Case, When, IntegerField
 from django.conf import settings
 from django.core.cache import cache
-
+from django.contrib.admin.views.decorators import staff_member_required
 
 from django.utils import timezone as dj_timezone
 from datetime import datetime, timezone, timedelta
@@ -1051,3 +1051,55 @@ def api_search_intelligent(request):
             "message": "Search service error. Please try again.",
             "error": "unexpected_error"
         }, status=200)  # Return 200 not 500 - client can retry
+
+@csrf_exempt
+@api_view(['POST'])
+def api_create_trek_from_osm(request):
+    """
+    Triggered from an admin session. Receives raw OSM details, runs OpenAI 
+    enrichment to fill out descriptions and activities, and builds a draft in Supabase.
+    """
+    name = request.data.get('name', '').strip()
+    display_name = request.data.get('display_name', '')
+    lat = request.data.get('lat')
+    lon = request.data.get('lon')
+
+    if not name:
+        return Response({"error": "Destination name is required"}, status=400)
+
+    # Extract state safely from the OSM address string
+    state_guess = "Uttarakhand"  # Safe backup default
+    if display_name and ',' in display_name:
+        parts = [p.strip() for p in display_name.split(',')]
+        if len(parts) >= 2:
+            state_guess = parts[-2]
+
+    # Call your existing AI pipeline to fetch high-quality descriptions and tags
+    from .ai_enrichment import enrich_destination_with_ai, create_fallback_enrichment
+    location_details = {'display_name': display_name, 'lat': lat, 'lon': lon}
+    enriched_data = enrich_destination_with_ai(name, location_details) or create_fallback_enrichment(name, location_details)
+
+    # Save directly into your local Supabase database table.
+    # TrekList.save() already auto-generates a unique slug-based id from `name`,
+    # so we don't need to build one manually here.
+    trek = TrekList.objects.create(
+        name=name,
+        state=state_guess,
+        short_desc=enriched_data.get('summary', ''),
+        activities=', '.join(enriched_data.get('activities', [])) if isinstance(enriched_data.get('activities'), list) else enriched_data.get('activities', ''),
+        latitude=float(lat) if lat else None,
+        longitude=float(lon) if lon else None,
+        duration_days=enriched_data.get('estimated_duration', '3 Days'),
+        operating_days='TBD',
+        price_start=0,          # Clear starting marker indicating it's an unpriced draft
+        currency='INR',
+        is_ai_generated=True,   # 🤖 Populates your green checkmark rule!
+    )
+
+    # Instantly clear the homepage/featured cache to keep things synced up
+    cache.delete("featured_treks_qs")
+
+    return Response({
+        "status": "created",
+        "trek_id": trek.id
+    }, status=201)

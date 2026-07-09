@@ -9,6 +9,7 @@ export default function DestinationDetails() {
   const [destination, setDestination] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [addStatus, setAddStatus] = useState('');
 
   const BACKEND_URL = 'http://127.0.0.1:8000';
 

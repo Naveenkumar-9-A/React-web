@@ -388,6 +388,7 @@ class TrekList(models.Model):
     )
     related_treks = models.ManyToManyField('self', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_ai_generated = models.BooleanField(default=False, help_text="True if this trek was created from an OSM search result and may still need review (photo, price, schedule).")
 
     def save(self, *args, **kwargs):
         if not self.id:
