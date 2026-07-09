@@ -80,6 +80,8 @@ class Contact(models.Model):
     trek_category = models.CharField(max_length=50, choices=TREK_CATEGORY_CHOICES, blank=True, null=True)
     comment = models.TextField()
     created_at = models.DateTimeField(default=timezone.now)
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['-created_at']
