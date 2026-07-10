@@ -195,7 +195,19 @@ const handleSearchInput = (e) => {
             return;
         }
 
-        // OpenStreetMap Trek
+        // OpenStreetMap Trek — save as draft for the team to review later
+        fetch(`${BACKEND_URL}/api/treks/create-from-osm/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: first.name,
+            display_name: first.display_name,
+            lat: first.lat,
+            lon: first.lon,
+            category: first.category,
+          }),
+        }).catch(() => {});
+
         const slug = generateSlug(first.name);
 
         navigate(`/destination/${slug}`, {
@@ -224,7 +236,7 @@ const handleSuggestionClick = (suggestion) => {
   }).catch((err) => console.log("Click log failed:", err));
 
   if (suggestion.type === 'osm') {
-    // Automatically create a draft trek from this OSM result, then go straight to CardDetails
+    // Save as a draft for the team to review later — fire and forget
     fetch(`${BACKEND_URL}/api/treks/create-from-osm/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -233,20 +245,12 @@ const handleSuggestionClick = (suggestion) => {
         display_name: suggestion.display_name,
         lat: suggestion.lat,
         lon: suggestion.lon,
+        category: suggestion.category,
       }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.trek_id) {
-          navigate(`/treks/${data.trek_id}`);
-        } else {
-          // fallback if creation failed for some reason
-          navigate('/treks/osm-destination', { state: { destination: suggestion } });
-        }
-      })
-      .catch(() => {
-        navigate('/treks/osm-destination', { state: { destination: suggestion } });
-      });
+    }).catch(() => {});
+
+    const slug = generateSlug(suggestion.name);
+    navigate(`/destination/${slug}`, { state: { destination: suggestion } });
   } else {
     navigate(`/treks/${suggestion.id}`);
   }

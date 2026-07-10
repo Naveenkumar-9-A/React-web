@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 from .models import (
     Contact, Blog, TrekCategory, Trek, 
     Testimonial, FAQ, SafetyTip, TeamMember,
-    HomepageBanner, TrekList, SearchLog
+    HomepageBanner, TrekList, SearchLog, OsmDraftTrek
 )
 
 def send_email_async(mail):
@@ -1056,50 +1056,50 @@ def api_search_intelligent(request):
 @api_view(['POST'])
 def api_create_trek_from_osm(request):
     """
-    Triggered from an admin session. Receives raw OSM details, runs OpenAI 
-    enrichment to fill out descriptions and activities, and builds a draft in Supabase.
+    Triggered when a visitor clicks an OSM search result. Runs AI enrichment
+    and saves it as a draft — NOT a published trek yet. A team member
+    reviews and publishes it manually via Django admin.
     """
     name = request.data.get('name', '').strip()
     display_name = request.data.get('display_name', '')
     lat = request.data.get('lat')
     lon = request.data.get('lon')
+    category = request.data.get('category', '')
 
     if not name:
         return Response({"error": "Destination name is required"}, status=400)
 
-    # Extract state safely from the OSM address string
-    state_guess = "Uttarakhand"  # Safe backup default
+    if OsmDraftTrek.objects.filter(name__iexact=name).exists():
+        existing = OsmDraftTrek.objects.filter(name__iexact=name).first()
+        return Response({"status": "already_exists", "draft_id": existing.id}, status=200)
+
+    if TrekList.objects.filter(name__iexact=name).exists():
+        existing = TrekList.objects.filter(name__iexact=name).first()
+        return Response({"status": "already_published", "trek_id": existing.id}, status=200)
+
+    state_guess = "Uttarakhand"
     if display_name and ',' in display_name:
         parts = [p.strip() for p in display_name.split(',')]
         if len(parts) >= 2:
             state_guess = parts[-2]
 
-    # Call your existing AI pipeline to fetch high-quality descriptions and tags
     from .ai_enrichment import enrich_destination_with_ai, create_fallback_enrichment
     location_details = {'display_name': display_name, 'lat': lat, 'lon': lon}
     enriched_data = enrich_destination_with_ai(name, location_details) or create_fallback_enrichment(name, location_details)
 
-    # Save directly into your local Supabase database table.
-    # TrekList.save() already auto-generates a unique slug-based id from `name`,
-    # so we don't need to build one manually here.
-    trek = TrekList.objects.create(
+    # from .utils import get_place_image
+    # image_url = get_place_image(name, category)
+
+    draft = OsmDraftTrek.objects.create(
         name=name,
         state=state_guess,
+        # image=image_url,
         short_desc=enriched_data.get('summary', ''),
         activities=', '.join(enriched_data.get('activities', [])) if isinstance(enriched_data.get('activities'), list) else enriched_data.get('activities', ''),
-        latitude=float(lat) if lat else None,
-        longitude=float(lon) if lon else None,
-        duration_days=enriched_data.get('estimated_duration', '3 Days'),
-        operating_days='TBD',
-        price_start=0,          # Clear starting marker indicating it's an unpriced draft
-        currency='INR',
-        is_ai_generated=True,   # 🤖 Populates your green checkmark rule!
+        duration_days=enriched_data.get('estimated_duration', ''),
     )
 
-    # Instantly clear the homepage/featured cache to keep things synced up
-    cache.delete("featured_treks_qs")
-
     return Response({
-        "status": "created",
-        "trek_id": trek.id
+        "status": "draft_created",
+        "draft_id": draft.id
     }, status=201)

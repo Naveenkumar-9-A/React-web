@@ -507,3 +507,29 @@ class SearchLog(models.Model):
 
     def __str__(self):
         return f"{self.query or self.tag} @ {self.searched_at}"
+    
+
+class OsmDraftTrek(models.Model):
+    """
+    Holding area for places discovered via OpenStreetMap search.
+    Nothing here is a real, published trek yet — a team member must
+    review and fill in operators/price/schedule, then publish it
+    into TrekList manually.
+    """
+    name = models.CharField(max_length=200)
+    state = models.CharField(max_length=100, blank=True, null=True)
+    image = models.CharField(max_length=500, blank=True, null=True)
+    short_desc = models.TextField(blank=True, null=True)
+    activities = models.TextField(blank=True, null=True)
+
+    # Fields the team fills in manually before publishing
+    operators = models.ManyToManyField(Operator, blank=True)
+    price_start = models.PositiveIntegerField(blank=True, null=True)
+    operating_days = models.CharField(max_length=200, blank=True, null=True)
+    duration_days = models.CharField(max_length=100, blank=True, null=True)
+
+    is_published = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} (draft)"
