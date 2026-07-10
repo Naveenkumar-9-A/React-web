@@ -496,14 +496,14 @@ class OsmDraftTrekAdmin(admin.ModelAdmin):
     list_display = ('name', 'state', 'price_start', 'operating_days', 'is_published', 'created_at')
     list_filter = ('is_published', 'state')
     search_fields = ('name', 'state')
-    filter_horizontal = ('operators',)
+    filter_horizontal = ('operators', 'trek_points', 'related_treks')
 
     fieldsets = (
         ("Auto-generated (from OSM/AI)", {
             "fields": ('name', 'state', 'image', 'short_desc', 'activities'),
         }),
         ("Fill in manually before publishing", {
-            "fields": ('operators', 'price_start', 'operating_days', 'duration_days'),
+            "fields": ('operators', 'trek_points', 'related_treks', 'price_start', 'operating_days', 'duration_days'),
             "description": "Fill these in, then use the 'Publish to Trek List' action below."
         }),
     )
@@ -541,6 +541,8 @@ class OsmDraftTrekAdmin(admin.ModelAdmin):
                 is_ai_generated=True,
             )
             trek.operators.set(draft.operators.all())
+            trek.trek_points.set(draft.trek_points.all())
+            trek.related_treks.set(draft.related_treks.all())
 
             draft.is_published = True
             draft.save()
