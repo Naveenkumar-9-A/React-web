@@ -1,6 +1,95 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/Contact.css'; // Links directly to your external styles sheet
 
+// Validation helpers
+// Exact email format: local-part@domain.tld
+// - no leading/trailing/consecutive dots in local part
+// - domain must have at least one dot, valid label chars, TLD of 2+ letters
+const EMAIL_REGEX = /^(?!.*\.\.)[a-zA-Z0-9._%+-]+(?<!\.)@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$/;
+
+// Indian mobile: exactly 10 digits, first digit must be 6, 7, 8, or 9
+const INDIAN_MOBILE_REGEX = /^[6789][0-9]{9}$/;
+
+// Whitelist of real top-level domains. A regex like [a-zA-Z]{2,} alone would
+// wrongly accept junk like "gmail.cokhvbjhjgh" since it's just letters.
+const SIMPLE_TLDS = new Set([
+  'com', 'net', 'org', 'edu', 'gov', 'mil', 'int', 'info', 'biz', 'name',
+  'in', 'co', 'io', 'me', 'us', 'uk', 'ca', 'au', 'de', 'fr', 'jp', 'cn',
+  'ru', 'br', 'za', 'nl', 'es', 'it', 'ch', 'se', 'no', 'nz', 'sg', 'ae',
+  'app', 'dev', 'xyz', 'online', 'store', 'tech', 'ai', 'shop', 'site',
+]);
+const COMPOUND_TLDS = new Set([
+  'co.in', 'org.in', 'net.in', 'gov.in', 'ac.in', 'edu.in', 'nic.in', 'res.in',
+  'co.uk', 'org.uk', 'ac.uk', 'gov.uk',
+  'com.au', 'net.au', 'org.au', 'co.nz',
+]);
+
+const hasValidTld = (domain) => {
+  const labels = domain.toLowerCase().split('.');
+  if (labels.length < 2) return false;
+  const lastTwo = labels.slice(-2).join('.');
+  if (COMPOUND_TLDS.has(lastTwo)) return true;
+  const lastOne = labels[labels.length - 1];
+  return SIMPLE_TLDS.has(lastOne);
+};
+
+// Catches common typos of popular email domains (e.g. gmail.co -> gmail.com)
+const DOMAIN_TYPO_FIXES = {
+  'gmail.co': 'gmail.com',
+  'gmail.cm': 'gmail.com',
+  'gmail.con': 'gmail.com',
+  'gmail.comm': 'gmail.com',
+  'gmial.com': 'gmail.com',
+  'gmail.om': 'gmail.com',
+  'gamil.com': 'gmail.com',
+  'yahoo.co': 'yahoo.com',
+  'yaho.com': 'yahoo.com',
+  'yahho.com': 'yahoo.com',
+  'hotmail.co': 'hotmail.com',
+  'hotmai.com': 'hotmail.com',
+  'hotmial.com': 'hotmail.com',
+  'outlook.co': 'outlook.com',
+  'outlok.com': 'outlook.com',
+  'rediffmail.co': 'rediffmail.com',
+  'icloud.co': 'icloud.com',
+};
+
+const getDomainTypoFix = (email) => {
+  const domain = email.split('@')[1]?.toLowerCase().trim();
+  if (!domain) return null;
+  return DOMAIN_TYPO_FIXES[domain] || null;
+};
+
+const validateField = (name, value) => {
+  switch (name) {
+    case 'email': {
+      if (!value) return 'Please fill this field. Example: yourname@gmail.com';
+      if (!EMAIL_REGEX.test(value)) return 'That email looks incorrect. Please enter it like: yourname@gmail.com';
+      const domain = value.split('@')[1] || '';
+      if (!hasValidTld(domain)) return 'That domain ending doesn\'t look real. Please enter it like: yourname@gmail.com';
+      const typoFix = getDomainTypoFix(value);
+      if (typoFix) return `Looks like a typo. Did you mean "${value.split('@')[0]}@${typoFix}"?`;
+      return '';
+    }
+    case 'mobile':
+      if (!value) return 'Please fill this field. Example: 9876543210';
+      if (value.length < 10) return `Enter all 10 digits. Example: 9876543210 (${value.length}/10 entered)`;
+      if (!INDIAN_MOBILE_REGEX.test(value)) return 'Number must start with 6, 7, 8, or 9. Example: 9876543210';
+      return '';
+    case 'name':
+      if (!value) return 'Please fill this field. Example: Ravi Kumar';
+      if (!/^[A-Za-z\s]{2,50}$/.test(value)) return 'Use letters only, 2–50 characters. Example: Ravi Kumar';
+      return '';
+    case 'comment':
+      if (!value) return 'Please fill this field with your message (at least 10 characters).';
+      if (value.length < 10) return `Message too short. Add ${10 - value.length} more character(s).`;
+      if (value.length > 500) return 'Message is too long. Please keep it under 500 characters.';
+      return '';
+    default:
+      return '';
+  }
+};
+
 export default function Contact() {
   const [formData, setFormData] = useState({
     name: '',
@@ -10,12 +99,14 @@ export default function Contact() {
     trek_category: '',
     comment: '',
   });
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
   const [contactInfo, setContactInfo] = useState(null);
   const [socialMedia, setSocialMedia] = useState([]);
   const [showTrekCategory, setShowTrekCategory] = useState(false);
   const [showVendorInfo, setShowVendorInfo] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState(null);  
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     fetch('/api/contact-info/')
@@ -37,14 +128,58 @@ export default function Contact() {
   };
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    // Mobile: strip non-digits and cap at 10 chars as the user types
+    const cleanedValue = name === 'mobile' ? value.replace(/[^0-9]/g, '').slice(0, 10) : value;
+
+    setFormData(prev => ({ ...prev, [name]: cleanedValue }));
+
+    // Live-validate once the field has been touched
+    if (touched[name]) {
+      setErrors(prev => ({ ...prev, [name]: validateField(name, cleanedValue) }));
+    }
   };
 
-const handleSubmit = async (e) => {
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+    setErrors(prev => ({ ...prev, [name]: validateField(name, value) }));
+  };
+
+  const fieldClass = (name) =>
+    `form-control-custom${touched[name] && errors[name] ? ' is-invalid' : ''}`;
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate every required field before submitting
+    const fieldsToValidate = ['name', 'email', 'mobile', 'comment'];
+    const newErrors = {};
+    fieldsToValidate.forEach((field) => {
+      newErrors[field] = validateField(field, formData[field]);
+    });
+    if (!formData.user_type) newErrors.user_type = 'Please select an option from the list.';
+
+    setErrors(newErrors);
+    setTouched({ name: true, email: true, mobile: true, comment: true, user_type: true });
+
+    const hasErrors = Object.values(newErrors).some(Boolean);
+    if (hasErrors) {
+      const missingCount = Object.values(newErrors).filter(Boolean).length;
+      setToast({
+        type: 'error',
+        msg: missingCount > 1
+          ? `❌ Please fill all fields correctly (${missingCount} fields need attention).`
+          : '❌ Please correct the highlighted field before submitting.',
+      });
+      setTimeout(() => setToast(null), 4000);
+      return;
+    }
+
     setSubmitting(true);
     try {
-     const res = await fetch('/contact/', {
+      const res = await fetch('/contact/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -53,6 +188,8 @@ const handleSubmit = async (e) => {
       if (res.ok) {
         setToast({ type: 'success', msg: "✅ Message sent! We'll get back to you soon." });
         setFormData({ name: '', email: '', mobile: '', user_type: '', trek_category: '', comment: '' });
+        setErrors({});
+        setTouched({});
         setShowTrekCategory(false);
         setShowVendorInfo(false);
       } else {
@@ -68,7 +205,7 @@ const handleSubmit = async (e) => {
   return (
     <main className="contact-page container py-5 mt-5">
       <div className="row g-4 align-items-center">
-        
+
         {/* FORM MODULE CONTAINER */}
         <div className="col-lg-6">
           <div className="contact-card p-4">
@@ -78,45 +215,48 @@ const handleSubmit = async (e) => {
               {/* Name Input Block */}
               <div className="input-group-custom mb-3">
                 <label htmlFor="name" className="form-label">Name</label>
-                <input type="text" className="form-control-custom" id="name" name="name"
-                  pattern="^[A-Za-z\s]{2,50}$"
-                  title="Name should only contain letters and spaces (2–50 characters)"
-                  value={formData.name} onChange={handleChange} required />
-                <div className="invalid-feedback">Please enter a valid name (2–50 letters only).</div>
+                <input type="text" className={fieldClass('name')} id="name" name="name"
+                  value={formData.name} onChange={handleChange} onBlur={handleBlur} required />
+                {touched.name && errors.name && (
+                  <div className="invalid-feedback d-block">{errors.name}</div>
+                )}
               </div>
 
               {/* Email Input Block */}
               <div className="input-group-custom mb-3">
                 <label htmlFor="email" className="form-label">Email</label>
-                <input type="email" className="form-control-custom" id="email" name="email"
-                  pattern="[a-zA-Z0-9._%+\-]+@gmail\.com"
-                  title="Enter a valid Gmail address (example@gmail.com)"
-                  value={formData.email} onChange={handleChange} required />
-                <div className="invalid-feedback">Enter a valid Gmail address.</div>
+                <input type="email" className={fieldClass('email')} id="email" name="email"
+                  placeholder="name@example.com"
+                  value={formData.email} onChange={handleChange} onBlur={handleBlur} required />
+                {touched.email && errors.email && (
+                  <div className="invalid-feedback d-block">{errors.email}</div>
+                )}
               </div>
 
               {/* Mobile Input Block */}
               <div className="input-group-custom mb-3">
                 <label htmlFor="mobile" className="form-label">Mobile Number</label>
-                <input type="tel" className="form-control-custom" id="mobile" name="mobile"
-                  pattern="^[6-9][0-9]{9}$" maxLength="10" minLength="10"
-                  title="Enter a valid 10-digit Indian mobile number starting with 6-9"
-                  onInput={e => e.target.value = e.target.value.replace(/[^0-9]/g, '')}
-                  value={formData.mobile} onChange={handleChange} required />
-                <div className="invalid-feedback">Enter a valid 10-digit mobile number starting with 6–9.</div>
+                <input type="tel" className={fieldClass('mobile')} id="mobile" name="mobile"
+                  maxLength="10" inputMode="numeric" placeholder="9876543210"
+                  value={formData.mobile} onChange={handleChange} onBlur={handleBlur} required />
+                {touched.mobile && errors.mobile && (
+                  <div className="invalid-feedback d-block">{errors.mobile}</div>
+                )}
               </div>
 
               {/* User Type Selection Dropdown */}
               <div className="input-group-custom mb-3">
                 <label htmlFor="user_type" className="form-label">I am a</label>
                 <select id="user_type" name="user_type" className="form-select-custom"
-                  onChange={handleUserType} value={formData.user_type} required>
+                  onChange={handleUserType} onBlur={handleBlur} value={formData.user_type} required>
                   <option value="">-- Select --</option>
                   <option value="trekker">Trekker</option>
                   <option value="organizer">Trek Organizer</option>
                   <option value="other">Other</option>
                 </select>
-                <div className="invalid-feedback">Please select your user type.</div>
+                {touched.user_type && errors.user_type && (
+                  <div className="invalid-feedback d-block">{errors.user_type}</div>
+                )}
               </div>
 
               {/* Trek Category Condition Module */}
@@ -152,11 +292,12 @@ const handleSubmit = async (e) => {
               {/* Message Comment Text Area Box */}
               <div className="input-group-custom mb-4">
                 <label htmlFor="comment" className="form-label">Your Message</label>
-                <textarea id="comment" name="comment" className="form-control-custom" rows="3"
-                  minLength="10" maxLength="500"
-                  title="Message should be between 10 and 500 characters"
-                  value={formData.comment} onChange={handleChange} required></textarea>
-                <div className="invalid-feedback">Message must be between 10–500 characters.</div>
+                <textarea id="comment" name="comment" className={fieldClass('comment')} rows="3"
+                  maxLength="500"
+                  value={formData.comment} onChange={handleChange} onBlur={handleBlur} required></textarea>
+                {touched.comment && errors.comment && (
+                  <div className="invalid-feedback d-block">{errors.comment}</div>
+                )}
               </div>
 
               <div className="text-center">
