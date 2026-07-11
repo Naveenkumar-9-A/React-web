@@ -509,3 +509,24 @@ class SearchLog(models.Model):
 
     def __str__(self):
         return f"{self.query or self.tag} @ {self.searched_at}"
+    
+
+class OsmDraftTrek(models.Model):
+    name = models.CharField(max_length=200)
+    state = models.CharField(max_length=100, blank=True, null=True)
+    image = models.CharField(max_length=500, blank=True, null=True)
+    short_desc = models.TextField(blank=True, null=True)
+    activities = models.TextField(blank=True, null=True)
+
+    operators = models.ManyToManyField(Operator, blank=True)
+    trek_points = models.ManyToManyField(TrekPoint, blank=True)
+    related_treks = models.ManyToManyField(TrekList, blank=True)
+    price_start = models.PositiveIntegerField(blank=True, null=True)
+    operating_days = models.CharField(max_length=200, blank=True, null=True)
+    duration_days = models.CharField(max_length=100, blank=True, null=True)
+
+    is_published = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} (draft)"

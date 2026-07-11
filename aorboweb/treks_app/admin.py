@@ -4,6 +4,7 @@ from django.db.models import Count
 from django.utils import timezone
 from datetime import timedelta
 from django.utils.safestring import mark_safe
+from django.core.cache import cache
 from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse, path
 import supabase
@@ -19,7 +20,7 @@ from .models import (
     Contact, Blog, TrekCategory, TrekOrganizer, Trek, TrekImage,
     Testimonial, FAQ, SafetyTip, TeamMember, HomepageBanner,
     SocialMedia, ContactInfo, TrekList, Visitor,
-    TermsAndConditions, Operator, Tag, TrekPoint, SearchLog
+    TermsAndConditions, Operator, Tag, TrekPoint, SearchLog, OsmDraftTrek
 )
 
 
@@ -535,3 +536,65 @@ class SearchLogAdmin(admin.ModelAdmin):
             request.GET.pop('year')
 
         return super().changelist_view(request, extra_context=extra_context)
+
+@admin.register(OsmDraftTrek)
+class OsmDraftTrekAdmin(admin.ModelAdmin):
+    list_display = ('name', 'state', 'price_start', 'operating_days', 'is_published', 'created_at')
+    list_filter = ('is_published', 'state')
+    search_fields = ('name', 'state')
+    filter_horizontal = ('operators', 'trek_points', 'related_treks')
+
+    fieldsets = (
+        ("Auto-generated (from OSM/AI)", {
+            "fields": ('name', 'state', 'image', 'short_desc', 'activities'),
+        }),
+        ("Fill in manually before publishing", {
+            "fields": ('operators', 'trek_points', 'related_treks', 'price_start', 'operating_days', 'duration_days'),
+            "description": "Fill these in, then use the 'Publish to Trek List' action below."
+        }),
+    )
+
+    actions = ['publish_to_treklist']
+
+    def publish_to_treklist(self, request, queryset):
+        published_count = 0
+        skipped_count = 0
+
+        for draft in queryset:
+            if draft.is_published:
+                skipped_count += 1
+                continue
+
+            if not draft.price_start or not draft.operating_days:
+                self.message_user(
+                    request,
+                    f"Skipped '{draft.name}' — price and operating days must be filled in first.",
+                    level='warning'
+                )
+                skipped_count += 1
+                continue
+
+            trek = TrekList.objects.create(
+                name=draft.name,
+                state=draft.state,
+                image=draft.image,
+                short_desc=draft.short_desc,
+                activities=draft.activities,
+                duration_days=draft.duration_days,
+                operating_days=draft.operating_days,
+                price_start=draft.price_start,
+                currency='INR',
+                is_ai_generated=True,
+            )
+            trek.operators.set(draft.operators.all())
+            trek.trek_points.set(draft.trek_points.all())
+            trek.related_treks.set(draft.related_treks.all())
+
+            draft.is_published = True
+            draft.save()
+            published_count += 1
+
+        cache.delete("featured_treks_qs")
+
+        self.message_user(request, f"Published {published_count} trek(s). Skipped {skipped_count}.")
+    publish_to_treklist.short_description = "✅ Publish selected drafts to Trek List"

@@ -195,7 +195,19 @@ const handleSearchInput = (e) => {
             return;
         }
 
-        // OpenStreetMap Trek
+        // OpenStreetMap Trek — save as draft for the team to review later
+        fetch(`${BACKEND_URL}/api/treks/create-from-osm/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: first.name,
+            display_name: first.display_name,
+            lat: first.lat,
+            lon: first.lon,
+            category: first.category,
+          }),
+        }).catch(() => {});
+
         const slug = generateSlug(first.name);
 
         navigate(`/destination/${slug}`, {
@@ -213,15 +225,9 @@ const handleSearchInput = (e) => {
 };
 
 const handleSuggestionClick = (suggestion) => {
-  if (suggestion.type === "no-results") {
-  return;
-}
-  // ✅ Log click (only if backend is available)
   fetch(`${BACKEND_URL}/api/treks/log-click/`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       trek_id: suggestion.id || null,
       query: searchQuery,
@@ -229,12 +235,22 @@ const handleSuggestionClick = (suggestion) => {
     }),
   }).catch((err) => console.log("Click log failed:", err));
 
-  // ✅ Navigate based on suggestion type
   if (suggestion.type === 'osm') {
+    // Save as a draft for the team to review later — fire and forget
+    fetch(`${BACKEND_URL}/api/treks/create-from-osm/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: suggestion.name,
+        display_name: suggestion.display_name,
+        lat: suggestion.lat,
+        lon: suggestion.lon,
+        category: suggestion.category,
+      }),
+    }).catch(() => {});
+
     const slug = generateSlug(suggestion.name);
-    navigate(`/destination/${slug}`, {
-      state: { destination: suggestion },
-    });
+    navigate(`/destination/${slug}`, { state: { destination: suggestion } });
   } else {
     navigate(`/treks/${suggestion.id}`);
   }
@@ -242,7 +258,6 @@ const handleSuggestionClick = (suggestion) => {
   setShowSuggestions(false);
   setSearchQuery('');
 };
-
 // ✅ Handle tag click (from main branch)
 const handleTagClick = (tag) => {
   fetch(`${BACKEND_URL}/api/treks/log-click/`, {
