@@ -170,6 +170,13 @@ EMAIL_HOST_USER = config("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+OSM_DRAFT_NOTIFICATION_EMAILS = [
+    "hello@aorbotreks.com",
+    
+
+]
+
+
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Kolkata'
 USE_I18N = True
@@ -260,6 +267,7 @@ CONTENT_SECURITY_POLICY = {
             'https://www.aorbotreks.com',
             "https://xsconhhzyaiowokwsqne.supabase.co",
             'https://www.gstatic.com',
+            'https://upload.wikimedia.org',
             'http://localhost:8000',
             'http://127.0.0.1:8000',
             'http://localhost:5173',

@@ -11,7 +11,7 @@ from django.db.models import Q, Case, When, IntegerField
 from django.conf import settings
 from django.core.cache import cache
 from django.contrib.admin.views.decorators import staff_member_required
-
+from .utils import extract_state_from_display_name
 from django.utils import timezone as dj_timezone
 from datetime import datetime, timezone, timedelta
 import json
@@ -32,69 +32,6 @@ def send_email_async(mail):
     threading.Thread(target=mail.send).start()
 
 
-def get_featured_treks():
-    cache_key = "featured_treks_qs"
-    qs = cache.get(cache_key)
-
-    if qs is not None:
-        return qs
-
-    qs = (
-        TrekList.objects
-        .prefetch_related('tags')
-        .annotate(
-            pin_order=Case(
-                When(is_pinned=True, then=0),
-                default=1,
-                output_field=IntegerField()
-            )
-        )
-        .order_by('pin_order', 'pin_priority', '-created_at')
-    )
-
-    cache.set(cache_key, qs, 60 * 10)  
-    return qs
-
-
-def get_trek_categories():
-    cache_key = "trek_categories_all"
-    categories = cache.get(cache_key)
-
-    if categories is None:
-        categories = TrekCategory.objects.all()
-        cache.set(cache_key, categories, 60 * 60)
-
-    return categories
-
-def home(request):
-    page_number = request.GET.get('page', 1)
-    cache_key = f"home_page_{page_number}"
-    cached_context = cache.get(cache_key)
-
-    if cached_context:
-        return render(request, 'index.html', cached_context)
-
-    paginator = Paginator(get_featured_treks(), 8)
-    page_obj = paginator.get_page(page_number)
-
-    faq_categories = cache.get("faq_categories")
-    if not faq_categories:
-        faq_categories = {}
-        for faq in FAQ.objects.all().order_by('category', 'order'):
-            faq_categories.setdefault(faq.category, []).append(faq)
-        cache.set("faq_categories", faq_categories, 60 * 60)
-
-    context = {
-        'featured_treks': page_obj.object_list,
-        'page_obj': page_obj,
-        'featured_testimonials': Testimonial.objects.filter(is_featured=True)[:6],
-        'featured_blogs': Blog.objects.filter(is_featured=True)[:3],
-        'banners': HomepageBanner.objects.filter(is_active=True).order_by('order'),
-        'faq_categories': faq_categories,
-    }
-
-    cache.set(cache_key, context, 60 * 10)
-    return render(request, 'index.html', context)
 
 
 STOP_WORDS = {"best", "top", "places", "place", "near", "visit", "to", "trip", "trips", "treks", "trek"}
@@ -105,225 +42,6 @@ def normalize_text(text):
 def clean_query(query):
     return " ".join(w for w in normalize_text(query).split() if w not in STOP_WORDS)
 
-def score_match(query, text):
-    query, text = normalize_text(query), normalize_text(text)
-    score = 0
-    if text == query: score += 120
-    if text.startswith(query): score += 100
-    if any(w.startswith(query) for w in text.split()): score += 80
-    if query in text: score += 60
-    sim = difflib.SequenceMatcher(None, query, text).ratio()
-    if sim > 0.6:
-        score += int(sim * 40)
-    return score
-
-def typo_score(query, text):
-    return int(difflib.SequenceMatcher(None, query, text).ratio() * 100)
-
-
-def search_trek(request):
-    query = request.GET.get("q", "").strip()
-    if not query:
-        return redirect("home")
-
-    cleaned_query = clean_query(query)
-    if not cleaned_query:
-        return redirect("home")
-
-    treks = (
-        TrekList.objects
-        .filter(
-            Q(name__icontains=cleaned_query) |
-            Q(state__icontains=cleaned_query) |
-            Q(tags__name__icontains=cleaned_query)
-        )
-        .distinct()[:50] 
-    )
-
-    ranked = sorted(treks, key=lambda t: score_match(cleaned_query, t.name), reverse=True)
-
-    if ranked:
-        return redirect("card_trek_detail", ranked[0].id)
-
-    return redirect("home")
-
-
-def search_suggestions(request):
-    query = request.GET.get("q", "").strip()
-
-    # To this — only log if query is 4+ characters
-    if len(query) < 2:
-        return JsonResponse({"results": []})
-
-
-    # if len(query) >= 4:
-    #     SearchLog.objects.create(query=query, ip_address=request.META.get('REMOTE_ADDR'))
-
-
-    # Cache search suggestions for 30 minutes
-
-    query_n = normalize_text(query)
-    cache_key = f"search_suggestions_{query_n}"
-
-    cached_results = cache.get(cache_key)
-    if cached_results:
-        return JsonResponse(cached_results)
-
-    MAX_RESULTS = 8
-    scored = []
-
-    treks = (
-        TrekList.objects
-        .filter(name__istartswith=query_n)
-        .only("id", "name", "state")[:30]
-    )
-
-    for trek in treks:
-        name = trek.name or ""
-        state = trek.state or ""
-        score = 0
-
-        if name.lower().startswith(query_n):
-            score += 120
-
-        for word in name.lower().split():
-            if word.startswith(query_n):
-                score += 90
-
-        if score < 80:
-            score = max(score, typo_score(query_n, name))
-
-        if score < 60 and state:
-            score = max(score, typo_score(query_n, state) - 10)
-
-        if score >= 55:
-            scored.append((score, trek))
-
-    scored.sort(key=lambda x: x[0], reverse=True)
-
-    results = []
-    seen = set()
-
-    for score, trek in scored[:MAX_RESULTS]:
-        if trek.id in seen:
-            continue
-
-        results.append({
-            "label": trek.name,
-            "type": "trek",
-            "url": reverse("card_trek_detail", args=[trek.id]),
-        })
-        seen.add(trek.id)
-
-    if results:
-        results.append({
-            "label": f"Best treks near {query}",
-            "type": "intent",
-            "url": reverse("search_trek") + f"?q={query}",
-        })
-
-    response_data = {"results": results}
-    cache.set(cache_key, response_data, 60 * 30) 
-    return JsonResponse(response_data)
-
-def about(request):
-    cache_key = "about_page_team_members"
-    team_members = cache.get(cache_key)
-    
-    if not team_members:
-        team_members = TeamMember.objects.all().order_by('order')
-        cache.set(cache_key, team_members, 60 * 60)
-    
-    return render(request, 'about.html', {
-        'team_members': team_members
-    })
-
-def blogs(request):
-    page_number = request.GET.get('page', 1)
-    cache_key = f"blogs_page_{page_number}"
-    cached_page = cache.get(cache_key)
-    
-    if cached_page:
-        return render(request, 'blogs.html', {'blogs': cached_page})
-    
-    paginator = Paginator(
-        Blog.objects.only("id", "title", "slug", "created_at").order_by("-created_at"), 4)
-    page_obj = paginator.get_page(page_number)
-    
-    cache.set(cache_key, page_obj, 60 * 30) 
-    return render(request, 'blogs.html', {
-        'blogs': page_obj
-    })
-
-def blog_detail(request, slug):
-    blog = get_object_or_404(Blog, slug=slug)
-    all_recent = Blog.objects.exclude(id=blog.id).order_by('-created_at')
-    paginator = Paginator(all_recent, 4)
-    page_number = request.GET.get('page')
-    recent_blogs = paginator.get_page(page_number)
-    return render(request, 'blog_detail.html', {
-        'blog': blog,
-        'recent_blogs': recent_blogs
-    })
-
-def treks(request):
-    category_id = request.GET.get('category')
-    difficulty = request.GET.get('difficulty')
-    page_number = request.GET.get('page', 1)
-
-    cache_key = f"treks_{page_number}_{category_id}_{difficulty}"
-    cached = cache.get(cache_key)
-    if cached:
-        return render(request, 'treks.html', cached)
-
-    qs = Trek.objects.all()
-    if category_id:
-        qs = qs.filter(category_id=category_id)
-    if difficulty:
-        qs = qs.filter(difficulty=difficulty)
-
-    paginator = Paginator(qs, 12)
-    page_obj = paginator.get_page(page_number)
-
-    context = {
-        'treks': page_obj,
-        'categories': get_trek_categories(),
-        'selected_category': category_id,
-        'selected_difficulty': difficulty,
-        'difficulty_choices': Trek.DIFFICULTY_CHOICES,
-    }
-
-    cache.set(cache_key, context, 60 * 30)
-    return render(request, 'treks.html', context)
-
-def trek_detail(request, slug):
-    cache_key = f"trek_detail_{slug}"
-    cached_data = cache.get(cache_key)
-    
-    if cached_data:
-        return render(request, 'trek_detail.html', cached_data)
-    
-    trek = get_object_or_404(Trek, slug=slug)
-    context = {
-        'trek': trek,
-        'testimonials': trek.testimonials.all(),
-        'similar_treks': Trek.objects.filter(category=trek.category).exclude(id=trek.id)[:3],
-    }
-    
-    cache.set(cache_key, context, 60 * 60)
-    return render(request, 'trek_detail.html', context)
-
-def safety(request):
-    cache_key = "safety_page_tips"
-    safety_tips = cache.get(cache_key)
-    
-    if not safety_tips:
-        safety_tips = SafetyTip.objects.all().order_by('order')
-        cache.set(cache_key, safety_tips, 60 * 60)
-    
-    return render(request, 'safety.html', {
-        'safety_tips': safety_tips
-    })
 
 def detect_trek_category(message: str):
     message = message.lower()
@@ -450,38 +168,6 @@ def contact(request):
     return JsonResponse({"message": "Message sent successfully"})
 
 
-def travel_your_way(request):
-    selected_tag = request.GET.get("tag")
-    if not selected_tag:
-        return redirect("home")
-
-    treks = TrekList.objects.filter(tags__name__iexact=selected_tag).distinct()
-    return render(request, "travel_your_way.html", {
-        "selected_tag": selected_tag,
-        "treks": treks,
-    })
-
-
-def card_trek_detail(request, slug):
-    trek = get_object_or_404(TrekList, id=slug)
-    related_treks = trek.related_treks.all() if hasattr(trek, "related_treks") else TrekList.objects.none()
-    activities_list = [a.strip() for a in trek.activities.split(",")] if trek.activities else []
-
-    return render(request, "card_details.html", {
-        "trek": trek,
-        "related_treks": related_treks,
-        "activities_list": activities_list,
-    })
-
-
-def privacy_policy(request):
-    return render(request, "privacypolicy.html")
-
-def terms_and_conditions(request):
-    return render(request, "terms_and_conditions.html")
-
-def user_agreement(request):
-    return render(request, "user_agreement.html")
 
 
 @api_view(['GET'])
@@ -543,7 +229,8 @@ def api_featured_treks(request):
                 img_url = str(first_image.image_url)
         elif hasattr(item, 'main_image') and item.main_image:
             img_url = item.main_image.url
-
+        elif item.image:   # ← ADD THIS — falls back to the plain image field (used by OSM-published treks)
+            img_url = str(item.image)
         operators_list = []
         if hasattr(item, 'operators_list') and item.operators_list:
             operators_list = [
@@ -605,7 +292,8 @@ def api_trek_detail(request, slug):
         first_image = trek_item.images.first()
         if first_image.image_url:
             img_url = str(first_image.image_url)
-
+    elif trek_item.image:   # ← ADD THIS
+        img_url = str(trek_item.image)
     return Response({
         "id": trek_item.id,
         "name": trek_item.name,
@@ -712,7 +400,8 @@ def api_travel_your_way(request):
             first_image = item.images.first()
             if hasattr(first_image, 'image_url') and first_image.image_url:
                 img_url = first_image.image_url.url if hasattr(first_image.image_url, 'url') else str(first_image.image_url)
-
+        elif item.image:   # ← ADD THIS
+            img_url = str(item.image)
         operators_list = []
         if hasattr(item, 'operators_list') and item.operators_list:
             operators_list = [op.strip() for op in item.operators_list.split(',')]
@@ -832,29 +521,45 @@ def api_enrich_destination(request):
         - local_cuisine
     """
     from .ai_enrichment import enrich_destination_with_ai, create_fallback_enrichment
-    
+    from .utils import get_place_image
+    import concurrent.futures
+
     destination_name = request.GET.get('name', '').strip()
-    
+
     if not destination_name:
         return Response({"error": "Destination name is required"}, status=400)
-    
-    # Prepare location details
+
     location_details = {
         'display_name': request.GET.get('display_name', destination_name),
         'lat': request.GET.get('lat', ''),
         'lon': request.GET.get('lon', '')
     }
-    
-    # Try to enrich with AI first
-    enriched_data = enrich_destination_with_ai(destination_name, location_details)
-    
-    # Fallback to basic enrichment if AI fails
+    category = request.GET.get('category', '')
+
+    # Run AI enrichment and image lookup at the same time — they're independent
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        enrich_future = executor.submit(enrich_destination_with_ai, destination_name, location_details)
+        image_future = executor.submit(get_place_image, destination_name, category)
+
+        try:
+            enriched_data = enrich_future.result()
+        except Exception as e:
+            logger.error(f"AI enrichment failed for '{destination_name}': {e}")
+            enriched_data = None
+
+        try:
+            image_url = image_future.result()
+        except Exception as e:
+            logger.error(f"Image lookup failed for '{destination_name}': {e}")
+            image_url = None
+
     if not enriched_data:
         enriched_data = create_fallback_enrichment(destination_name, location_details)
-    
+
     return Response({
         "destination": destination_name,
-        "enrichment": enriched_data
+        "enrichment": enriched_data,
+        "image_url": image_url,
     })
 
 
@@ -970,6 +675,38 @@ def filter_osm_results(request):
             "accepted_count": 0
         }, status=500)
 
+def send_osm_draft_notification(draft, request):
+    """
+    Emails the team whenever a new OsmDraftTrek is created, with a direct
+    link to review/publish it in Django admin — so no one needs to keep
+    checking the admin panel manually.
+    """
+    try:
+        admin_path = reverse(
+            f'admin:{draft._meta.app_label}_{draft._meta.model_name}_change',
+            args=[draft.id]
+        )
+        admin_url = request.build_absolute_uri(admin_path)
+
+        context = {
+            'trek_name': draft.name,
+            'state': draft.state,
+            'image_url': draft.image,
+            'short_desc': draft.short_desc,
+            'admin_url': admin_url,
+        }
+        html_content = render_to_string('emails/osm_draft_notification.html', context)
+
+        mail = EmailMultiAlternatives(
+            subject=f"🆕 New OSM Draft Trek: {draft.name}",
+            body=f"A new destination '{draft.name}' was searched and needs review. Visit {admin_url} to fill in details and publish.",
+            from_email=f"Aorbo Treks <{settings.DEFAULT_FROM_EMAIL}>",
+            to=settings.OSM_DRAFT_NOTIFICATION_EMAILS,
+        )
+        mail.attach_alternative(html_content, "text/html")
+        send_email_async(mail)
+    except Exception as e:
+        logger.error(f"Failed to send OSM draft notification email for '{draft.name}': {e}")
 
 @api_view(['GET'])
 def api_search_intelligent(request):
@@ -1059,6 +796,10 @@ def api_create_trek_from_osm(request):
     Triggered when a visitor clicks an OSM search result. Runs AI enrichment
     and saves it as a draft — NOT a published trek yet. A team member
     reviews and publishes it manually via Django admin.
+
+    A short-lived cache lock prevents duplicate drafts if multiple visitors
+    click the exact same new place within the same few seconds, before the
+    first request has finished saving to the database.
     """
     name = request.data.get('name', '').strip()
     display_name = request.data.get('display_name', '')
@@ -1069,37 +810,48 @@ def api_create_trek_from_osm(request):
     if not name:
         return Response({"error": "Destination name is required"}, status=400)
 
-    if OsmDraftTrek.objects.filter(name__iexact=name).exists():
-        existing = OsmDraftTrek.objects.filter(name__iexact=name).first()
-        return Response({"status": "already_exists", "draft_id": existing.id}, status=200)
+    lock_key = f"osm_draft_lock_{name.lower().strip()}"
+    lock_acquired = cache.add(lock_key, True, timeout=30)
 
-    if TrekList.objects.filter(name__iexact=name).exists():
-        existing = TrekList.objects.filter(name__iexact=name).first()
-        return Response({"status": "already_published", "trek_id": existing.id}, status=200)
+    if not lock_acquired:
+        return Response({
+            "status": "processing",
+            "message": "This destination is already being added — please try again shortly."
+        }, status=200)
 
-    state_guess = "Uttarakhand"
-    if display_name and ',' in display_name:
-        parts = [p.strip() for p in display_name.split(',')]
-        if len(parts) >= 2:
-            state_guess = parts[-2]
+    try:
+        if OsmDraftTrek.objects.filter(name__iexact=name).exists():
+            existing = OsmDraftTrek.objects.filter(name__iexact=name).first()
+            return Response({"status": "already_exists", "draft_id": existing.id}, status=200)
 
-    from .ai_enrichment import enrich_destination_with_ai, create_fallback_enrichment
-    location_details = {'display_name': display_name, 'lat': lat, 'lon': lon}
-    enriched_data = enrich_destination_with_ai(name, location_details) or create_fallback_enrichment(name, location_details)
+        if TrekList.objects.filter(name__iexact=name).exists():
+            existing = TrekList.objects.filter(name__iexact=name).first()
+            return Response({"status": "already_published", "trek_id": existing.id}, status=200)
 
-    # from .utils import get_place_image
-    # image_url = get_place_image(name, category)
+        state_guess = extract_state_from_display_name(display_name) or "Uttarakhand"
 
-    draft = OsmDraftTrek.objects.create(
-        name=name,
-        state=state_guess,
-        # image=image_url,
-        short_desc=enriched_data.get('summary', ''),
-        activities=', '.join(enriched_data.get('activities', [])) if isinstance(enriched_data.get('activities'), list) else enriched_data.get('activities', ''),
-        duration_days=enriched_data.get('estimated_duration', ''),
-    )
+        from .ai_enrichment import enrich_destination_with_ai, create_fallback_enrichment
+        location_details = {'display_name': display_name, 'lat': lat, 'lon': lon}
+        enriched_data = enrich_destination_with_ai(name, location_details) or create_fallback_enrichment(name, location_details)
 
-    return Response({
-        "status": "draft_created",
-        "draft_id": draft.id
-    }, status=201)
+        from .utils import get_place_image
+        image_url = get_place_image(name, category)
+
+        draft = OsmDraftTrek.objects.create(
+            name=name,
+            state=state_guess,
+            image=image_url,
+            short_desc=enriched_data.get('summary', ''),
+            activities=', '.join(enriched_data.get('activities', [])) if isinstance(enriched_data.get('activities'), list) else enriched_data.get('activities', ''),
+            duration_days=enriched_data.get('estimated_duration', ''),
+        )
+
+        send_osm_draft_notification(draft, request)
+
+        return Response({
+            "status": "draft_created",
+            "draft_id": draft.id
+        }, status=201)
+
+    finally:
+        cache.delete(lock_key)
