@@ -24,22 +24,25 @@ export default function DestinationDetails() {
         const lat = passedDestination?.lat;
         const lon = passedDestination?.lon;
         const display_name = passedDestination?.display_name;
+        const category = passedDestination?.category;
 
         let url = `${BACKEND_URL}/api/enrich-destination/?name=${encodeURIComponent(destinationName)}`;
         if (lat != null) url += `&lat=${lat}`;
         if (lon != null) url += `&lon=${lon}`;
         if (display_name) url += `&display_name=${encodeURIComponent(display_name)}`;
+        if (category) url += `&category=${encodeURIComponent(category)}`;
 
         const res = await fetch(url);
         if (!res.ok) throw new Error('Destination not found');
 
         const data = await res.json();
-        
+
         // Safely extract the enrichment block with fallback defaults
         const enrich = data.enrichment || {};
 
         setDestination({
           name: data.destination || destinationName,
+          image_url: data.image_url || null,
           lat: lat || data.lat,
           lon: lon || data.lon,
           display_name: display_name || data.display_name,
@@ -123,8 +126,20 @@ export default function DestinationDetails() {
     <main style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', maxWidth: '1200px', margin: '0 auto', padding: '1.5rem 1rem 4rem', background: pageBg, minHeight: '100vh' }}>
 
       {/* HERO SECTION */}
-      <div style={{ position: 'relative', borderRadius: '20px', overflow: 'hidden', marginBottom: '1.5rem', minHeight: '320px', background: darkGreen }}>
-        <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${darkGreen} 0%, #2d5a2d 100%)` }} />
+      <div
+        style={{
+          position: 'relative',
+          borderRadius: '20px',
+          overflow: 'hidden',
+          marginBottom: '1.5rem',
+          minHeight: '320px',
+          background: destination.image_url ? `${darkGreen} url(${destination.image_url}) center/cover no-repeat` : darkGreen,
+        }}
+      >
+        {/* Fallback gradient only shows when there's no real photo (visible through the background above) */}
+        {!destination.image_url && (
+          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${darkGreen} 0%, #2d5a2d 100%)` }} />
+        )}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,20,10,0.92) 0%, rgba(10,20,10,0.3) 60%, transparent 100%)' }} />
 
         <button
@@ -155,9 +170,6 @@ export default function DestinationDetails() {
             {destination.best_time_to_visit && (
               <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>📅 {destination.best_time_to_visit}</span>
             )}
-            {/*<span style={{ background: yellow, color: '#1a1a1a', fontSize: '13px', fontWeight: '700', padding: '5px 14px', borderRadius: '999px', marginLeft: 'auto' }}>
-              ₹{estimatedPrice} onwards
-            </span>*/}
           </div>
         </div>
       </div>
@@ -181,7 +193,7 @@ export default function DestinationDetails() {
 
       {/* MAIN CONTENT GRID */}
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,2fr) minmax(0,1fr)', gap: '1.25rem', alignItems: 'start' }}>
-        
+
         {/* LEFT COLUMN */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {/* ABOUT DESTINATION */}
@@ -245,34 +257,14 @@ export default function DestinationDetails() {
 
         {/* RIGHT COLUMN */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* PRICE CARD */}
-          {/*<div style={{ background: darkGreen, borderRadius: '16px', padding: '1.5rem', color: '#fff' }}>
-            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', margin: '0 0 0.25rem' }}>Estimated Package Price</p>
-            <p style={{ fontSize: '2rem', fontWeight: '700', color: yellow, margin: '0 0 0.25rem', lineHeight: 1 }}>₹{estimatedPrice}</p>
-            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', margin: '0 0 1.25rem' }}>per person onwards*</p>
-            
-            <button
-              onClick={() => {
-                alert(`Starting an adventure to ${destination.name} for ₹${estimatedPrice}. Coming soon!`);
-              }}
-              style={{
-                width: '100%',
-                background: yellow,
-                color: '#1a1a1a',
-                border: 'none',
-                borderRadius: '10px',
-                padding: '12px 16px',
-                fontSize: '14px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}
-            >
-              📋 Book Now
-            </button>
-          </div>*/}
+          {/* PRICE CARD - Coming Soon */}
+          <div style={{ background: darkGreen, borderRadius: '16px', padding: '1.5rem', color: '#fff', textAlign: 'center' }}>
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', margin: '0 0 0.5rem' }}>Package Price</p>
+            <span style={{ display: 'inline-block', background: yellow, color: '#1a1a1a', fontSize: '13px', fontWeight: '700', padding: '6px 18px', borderRadius: '999px', letterSpacing: '0.5px' }}>
+              Trek Details Coming Soon..
+            </span>
+            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', margin: '0.75rem 0 0' }}>Pricing details will be added soon</p>
+          </div>
 
           {/* TRIP INFORMATION */}
           <div style={{ background: yellowLight, border: `1px solid ${yellowBorder}`, borderRadius: '16px', padding: '1.25rem' }}>
@@ -294,17 +286,6 @@ export default function DestinationDetails() {
               </div>
             </div>
           </div>
-
-          {/* PRICE RULES */}
-          {/*<div style={{ background: '#FFF3CD', border: '1px solid #FFEAA7', borderRadius: '16px', padding: '1.25rem' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 0.75rem', color: '#856404' }}>💰 Price Rules</h3>
-            <ul style={{ margin: 0, paddingLeft: '1.5rem', color: '#856404', fontSize: '12px' }}>
-              <li style={{ marginBottom: '0.35rem' }}>Minimum price: ₹1000 per person</li>
-              <li style={{ marginBottom: '0.35rem' }}>Easy treks: ₹1000+</li>
-              <li style={{ marginBottom: '0.35rem' }}>Moderate destinations: ₹1500+</li>
-              <li>Difficult / Remote journeys: ₹2500+</li>
-            </ul>
-          </div>*/}
 
           {/* ACCOMMODATION */}
           {destination.accommodation && (

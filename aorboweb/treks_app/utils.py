@@ -468,3 +468,158 @@ def search_osm_multiple_queries(query):
     logger.info(f"✅ After filtering: {len(filtered)} trekking destinations")
 
     return filtered
+
+
+INDIAN_STATES = {
+    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
+    "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
+    "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram",
+    "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu",
+    "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+    "Andaman and Nicobar Islands", "Chandigarh",
+    "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Jammu and Kashmir",
+    "Ladakh", "Lakshadweep", "Puducherry",
+}
+
+
+def extract_state_from_display_name(display_name):
+    """
+    Find the actual Indian state name within an OSM display_name string,
+    instead of guessing by a fixed comma position (which breaks when
+    PIN codes or extra address segments are present).
+    """
+    if not display_name:
+        return None
+
+    parts = [p.strip() for p in display_name.split(',')]
+    for part in parts:
+        if part in INDIAN_STATES:
+            return part
+
+    return None
+
+def get_wikipedia_image(place_name):
+    """
+    Try to find a real photo of the place via Wikipedia's public API.
+    Strategy: exact title match first, then opensearch to find the closest
+    real article title (handles cases like "Tada Falls" vs actual title
+    "Tada Falls, Andhra Pradesh"), then pull that article's page image.
+    Returns an image URL, or None if nothing is found.
+    """
+    headers = {"User-Agent": "AorboTreks/1.0 (Trek Image Lookup)"}
+
+    # Attempt 1: exact title match
+    try:
+        url = "https://en.wikipedia.org/w/api.php"
+        params = {
+            "action": "query",
+            "titles": place_name,
+            "prop": "pageimages",
+            "format": "json",
+            "pithumbsize": 800,
+        }
+        response = requests.get(url, params=params, headers=headers, timeout=4)
+        response.raise_for_status()
+        data = response.json()
+
+        pages = data.get("query", {}).get("pages", {})
+        for page in pages.values():
+            thumbnail = page.get("thumbnail", {})
+            if thumbnail.get("source"):
+                return thumbnail["source"]
+    except Exception as e:
+        logger.warning(f"Wikipedia exact-match lookup failed for '{place_name}': {e}")
+
+    # Attempt 2: opensearch to find the closest real title, then fetch its image
+    try:
+        url = "https://en.wikipedia.org/w/api.php"
+        params = {
+            "action": "opensearch",
+            "search": place_name,
+            "limit": 3,
+            "namespace": 0,
+            "format": "json",
+        }
+        response = requests.get(url, params=params, headers=headers, timeout=4)
+        response.raise_for_status()
+        data = response.json()
+
+        candidate_titles = data[1] if len(data) > 1 else []
+
+        for candidate in candidate_titles:
+            image_params = {
+                "action": "query",
+                "titles": candidate,
+                "prop": "pageimages",
+                "format": "json",
+                "pithumbsize": 800,
+            }
+            image_response = requests.get(url, params=image_params, headers=headers, timeout=4)
+            image_response.raise_for_status()
+            image_data = image_response.json()
+
+            pages = image_data.get("query", {}).get("pages", {})
+            for page in pages.values():
+                thumbnail = page.get("thumbnail", {})
+                if thumbnail.get("source"):
+                    return thumbnail["source"]
+    except Exception as e:
+        logger.warning(f"Wikipedia opensearch lookup failed for '{place_name}': {e}")
+
+    return None
+
+
+def get_commons_image(place_name):
+    """
+    Fallback: search Wikimedia Commons directly for a matching photo.
+    Commons often has images for places that don't have a Wikipedia article.
+    Returns an image URL, or None if nothing is found.
+    """
+    try:
+        url = "https://commons.wikimedia.org/w/api.php"
+        headers = {"User-Agent": "AorboTreks/1.0 (Trek Image Lookup)"}
+        params = {
+            "action": "query",
+            "generator": "search",
+            "gsrsearch": f"{place_name} India",
+            "gsrnamespace": 6,  # File namespace
+            "gsrlimit": 3,
+            "prop": "imageinfo",
+            "iiprop": "url",
+            "iiurlwidth": 800,
+            "format": "json",
+        }
+        response = requests.get(url, params=params, headers=headers, timeout=4)
+        response.raise_for_status()
+        data = response.json()
+
+        pages = data.get("query", {}).get("pages", {})
+        for page in pages.values():
+            imageinfo = page.get("imageinfo", [])
+            if imageinfo and imageinfo[0].get("thumburl"):
+                return imageinfo[0]["thumburl"]
+
+        return None
+    except Exception as e:
+        logger.warning(f"Commons image lookup failed for '{place_name}': {e}")
+        return None
+
+
+def get_place_image(place_name, category=""):
+    """
+    Get a real image for an OSM-added destination.
+    Tries Wikipedia (exact match, then opensearch), then Wikimedia Commons.
+    No placeholder fallback — returns None if nothing real is found, so the
+    frontend can decide how to render the "no image" state.
+    Result (including None) is cached so repeat lookups don't re-hit the APIs.
+    """
+    cache_key = f"place_image_{place_name.lower().strip()}"
+    cached = cache.get(cache_key, "UNSET")
+    if cached != "UNSET":
+        return cached
+
+    image_url = get_wikipedia_image(place_name) or get_commons_image(place_name)
+
+    # Cache for 30 days if found, shorter if not (so a future Commons upload gets picked up sooner)
+    cache.set(cache_key, image_url, 60 * 60 * 24 * 30 if image_url else 60 * 60 * 24)
+    return image_url
