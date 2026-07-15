@@ -17,6 +17,9 @@ path('api/treks/<str:slug>/', views.api_trek_detail, name='api_trek_detail'),
 path('api/travel-your-way/', views.api_travel_your_way, name='api_travel_your_way'),
 path('api/blogs/', views.api_blogs_list, name='api_blogs_list'),
 path('api/blogs/<slug:slug>/', views.api_blog_detail, name='api_blog_detail'),
+path('api/contact-info/', views.api_contact_info, name='api_contact_info'),
+path('api/social-media/', views.api_social_media, name='api_social_media'),
+
     # AI Enrichment Endpoint
     path('api/enrich-destination/', views.api_enrich_destination, name='api_enrich_destination'),
     # ✅ PHASE 4: Nearby Destinations Discovery

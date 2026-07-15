@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 from .models import (
     Contact, Blog, TrekCategory, Trek, 
     Testimonial, FAQ, SafetyTip, TeamMember,
-    HomepageBanner, TrekList, SearchLog, OsmDraftTrek
+    HomepageBanner, TrekList, SearchLog, OsmDraftTrek, ContactInfo, SocialMedia
 )
 
 def send_email_async(mail):
@@ -65,7 +65,8 @@ def detect_trek_category(message: str):
 def contact(request):
 
     if request.method == "GET":
-        return render(request, "contact.html")
+        return JsonResponse({"message": "This endpoint accepts POST requests only."}, status=405)
+
 
     try:
         data = json.loads(request.body)
@@ -496,7 +497,42 @@ def api_blog_detail(request, slug):
         "has_next": page_obj.has_next(),
     })
 
+@api_view(['GET'])
+def api_contact_info(request):
+    """
+    Returns the site's registered contact info for the Contact page.
+    Uses ContactInfo.objects.first() since this is a singleton — one record
+    representing the company's official details.
+    """
+    contact_info = ContactInfo.objects.first()
 
+    if not contact_info:
+        return Response({}, status=200)
+
+    return Response({
+        "company_name": contact_info.company_name,
+        "address": contact_info.address,
+        "email": contact_info.email,
+        "phone": contact_info.phone,
+    })
+
+
+@api_view(['GET'])
+def api_social_media(request):
+    """
+    Returns all active social media links, ordered for display.
+    """
+    socials = SocialMedia.objects.all().order_by('order')
+
+    results = []
+    for s in socials:
+        results.append({
+            "name": s.platform,
+            "url": s.url,
+            "icon": s.icon.url if s.icon else None,
+        })
+
+    return Response(results)
 # ============ OpenAI Destination Enrichment Endpoint ============
 
 @api_view(['GET'])

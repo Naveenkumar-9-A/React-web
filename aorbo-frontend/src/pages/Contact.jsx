@@ -179,9 +179,11 @@ export default function Contact() {
 
     setSubmitting(true);
     try {
-      const res = await fetch('/contact/', {
+      const res = await fetch('/api/contact-submit/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(formData),
       });
       const result = await res.json();
@@ -367,20 +369,16 @@ export default function Contact() {
             <div className="map-thumbnail-box">
               <img src="/images/map_loc.webp" alt="Map Icon" className="map-icon-img" />
             </div>
-            {contactInfo ? (
+            {contactInfo && contactInfo.company_name ? (
               <div className="address-block-info">
                 <address>
                   <strong>{contactInfo.company_name}</strong><br />
-                  {contactInfo.address_line1}<br />
-                  {contactInfo.address_line2}<br />
-                  {contactInfo.registration_number && <span className="cin-text">CIN: {contactInfo.registration_number}</span>}
+                  {contactInfo.address}
                 </address>
-                {contactInfo.map_link && (
-                  <a href={contactInfo.map_link} target="_blank" rel="noreferrer"
-                    className="contact-link d-flex align-items-center mt-3">
-                    <span className="icon-emoji">📍</span> View in Maps
-                  </a>
-                )}
+                <a href="https://maps.app.goo.gl/ZgXJtZU7XJ9BXkaZ9" target="_blank" rel="noreferrer"
+                  className="contact-link d-flex align-items-center mt-3">
+                  <span className="icon-emoji">📍</span> View in Maps
+                </a>
               </div>
             ) : (
               <div className="address-block-info">
@@ -401,20 +399,16 @@ export default function Contact() {
         <div className="col-md-6 d-flex">
           <div className="card-custom w-100">
             <h4>Customer Support</h4>
-            {contactInfo ? (
+            {contactInfo && contactInfo.phone ? (
               <div className="support-block-info d-flex flex-column h-100">
-                <p>{contactInfo.support_description}</p>
-                {contactInfo.whatsapp_number && (
-                  <a href={`https://wa.me/${contactInfo.whatsapp_number}`} className="mt-2">
-                    <button className="chat-btn-custom">Get Help <span className="arrow">→</span></button>
-                  </a>
-                )}
+                <p>Tap on your Aorbo Treks app Help screen and select a topic for quick assistance.</p>
+                <a href={`https://wa.me/${contactInfo.phone}`} className="mt-2">
+                  <button className="chat-btn-custom">Get Help <span className="arrow">→</span></button>
+                </a>
                 <p className="support-text mt-3">To reach us by phone, tap below</p>
-                {contactInfo.phone_number && (
-                  <a href={`tel:+${contactInfo.phone_number}`} className="contact-link d-flex align-items-center mt-auto">
-                    <span className="icon-emoji">☎️</span> Contact Us
-                  </a>
-                )}
+                <a href={`tel:+${contactInfo.phone}`} className="contact-link d-flex align-items-center mt-auto">
+                  <span className="icon-emoji">☎️</span> Contact Us
+                </a>
               </div>
             ) : (
               <div className="support-block-info d-flex flex-column h-100">
