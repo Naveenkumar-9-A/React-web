@@ -43,14 +43,14 @@ echo.
 
 REM Start Backend Server in new terminal
 echo Starting Django Backend Server...
-start cmd /k "cd /d c:\Users\gumma\React-web\aorboweb && py manage.py runserver"
+start "" cmd /k "cd /d ""%~dp0aorboweb"" && py manage.py runserver"
 
 REM Wait a moment for backend to start
 timeout /t 3 /nobreak
 
 REM Start Frontend Dev Server in new terminal
 echo Starting Vite Frontend Dev Server...
-start cmd /k "cd /d c:\Users\gumma\React-web\aorbo-frontend && npm run dev"
+start "" cmd /k "cd /d ""%~dp0aorbo-frontend"" && npm run dev"
 
 echo.
 echo ============================================================================
