@@ -18,6 +18,7 @@ import UserAgreement from './pages/UserAgreement';
 import CardDetails from './pages/CardDetails';
 import TravelYourWay from './pages/TravelYourWay';
 import DestinationDetails from './pages/DestinationDetails';
+import CookieBanner from './components/CookieBanner';
 
 export default function App() {
   return (
@@ -44,6 +45,7 @@ export default function App() {
 
       {/* Dynamic Global Footer */}
       <Footer />
+      <CookieBanner />
     </Router>
   );
 }
