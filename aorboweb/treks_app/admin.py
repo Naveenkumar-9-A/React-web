@@ -20,7 +20,7 @@ from .models import (
     Contact, Blog, TrekCategory, TrekOrganizer, Trek, TrekImage,
     Testimonial, FAQ, SafetyTip, TeamMember, HomepageBanner,
     SocialMedia, ContactInfo, TrekList, Visitor,
-    TermsAndConditions, Operator, Tag, TrekPoint, SearchLog, OsmDraftTrek
+    TermsAndConditions, Operator, Tag, TrekPoint, SearchLog, OsmDraftTrek, ContentSection
 )
 
 
@@ -356,14 +356,14 @@ class VisitorAdmin(admin.ModelAdmin):
 
 
 # ── Terms & Conditions ──────────────────────────────────────────────────────
-@admin.register(TermsAndConditions)
-class TermsAndConditionsAdmin(admin.ModelAdmin):
-    list_display    = ('title', 'updated_at', 'content_preview')
-    readonly_fields = ('updated_at',)
+# @admin.register(TermsAndConditions)
+# class TermsAndConditionsAdmin(admin.ModelAdmin):
+#     list_display    = ('title', 'updated_at', 'content_preview')
+#     readonly_fields = ('updated_at',)
 
-    def content_preview(self, obj):
-        return mark_safe(obj.content[:100] + '...') if obj.content else "-"
-    content_preview.short_description = 'Content Preview'
+#     def content_preview(self, obj):
+#         return mark_safe(obj.content[:100] + '...') if obj.content else "-"
+#     content_preview.short_description = 'Content Preview'
 
 
 # ── Trek List ───────────────────────────────────────────────────────────────
@@ -598,3 +598,50 @@ class OsmDraftTrekAdmin(admin.ModelAdmin):
 
         self.message_user(request, f"Published {published_count} trek(s). Skipped {skipped_count}.")
     publish_to_treklist.short_description = "✅ Publish selected drafts to Trek List"
+
+
+@admin.register(ContentSection)
+class ContentSectionAdmin(admin.ModelAdmin):
+    list_display = (
+        "heading",
+        "page",
+        "order",
+        "is_active",
+        "updated_at",
+    )
+
+    list_filter = (
+        "page",
+        "is_active",
+    )
+
+    search_fields = (
+        "heading",
+        "content",
+    )
+
+    list_editable = (
+        "order",
+        "is_active",
+    )
+
+    ordering = (
+        "page",
+        "order",
+    )
+
+    fieldsets = (
+        (
+            "Content Details",
+            {
+                "fields": (
+                    "page",
+                    "heading",
+                    "sub_heading",
+                    "content",
+                    "order",
+                    "is_active",
+                )
+            },
+        ),
+    )

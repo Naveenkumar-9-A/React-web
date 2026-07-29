@@ -530,3 +530,43 @@ class OsmDraftTrek(models.Model):
 
     def __str__(self):
         return f"{self.name} (draft)"
+
+class ContentSection(models.Model):
+    PAGE_CHOICES = [
+        ("safety", "Safety"),
+        ("terms", "Terms & Conditions"),
+        ("privacy", "Privacy Policy"),
+        ("agreement", "User Agreement"),
+    ]
+
+    page = models.CharField(
+        max_length=30,
+        choices=PAGE_CHOICES
+    )
+
+    heading = models.CharField(max_length=255)
+
+    sub_heading = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Optional subsection heading"
+    )
+
+    content = RichTextField()
+
+    order = models.PositiveIntegerField(default=0)
+
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["page", "order"]
+        verbose_name = "Content Section"
+        verbose_name_plural = "Content Sections"
+
+    def __str__(self):
+        return f"{self.get_page_display()} - {self.heading}"

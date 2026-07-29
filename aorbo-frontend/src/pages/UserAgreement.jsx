@@ -1,6 +1,17 @@
-import React from 'react';
+import React, { useEffect, useState } from "react";
 
 export default function UserAgreement() {
+
+  const [contentSections, setContentSections] = useState([]);
+
+useEffect(() => {
+  fetch("http://127.0.0.1:8000/api/content-sections/agreement/")
+    .then((response) => response.json())
+    .then((data) => setContentSections(data))
+    .catch((error) =>
+      console.error("Failed to load agreement content:", error)
+    );
+}, []);
   // Combined inline styles object to handle layout structural design without separate CSS
   const styles = {
     container: {
@@ -314,6 +325,33 @@ export default function UserAgreement() {
           the User acknowledges that they have read, understood, and agreed to be bound by these terms and conditions.
         </p>
       </div>
+
+      {/* Additional User Agreement Sections from Admin */}
+
+{contentSections.length > 0 &&
+  contentSections.map((section, index) => (
+    <div
+      key={section.id}
+      style={{ marginBottom: "20px" }}
+    >
+      <h3 className="h4 fw-semibold">
+        {14 + index + 1}. {section.heading}
+      </h3>
+
+      {section.sub_heading && (
+        <h5 className="fw-semibold">
+          {section.sub_heading}
+        </h5>
+      )}
+
+      <div
+        dangerouslySetInnerHTML={{
+          __html: section.content,
+        }}
+      />
+    </div>
+  ))
+}
     </section>
   );
 }

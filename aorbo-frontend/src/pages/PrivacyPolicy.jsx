@@ -1,7 +1,24 @@
-import React from 'react';
+import React, { useEffect, useState } from "react";
 import '../styles/PrivacyPolicy.css'; // Make sure to paste the CSS block below into this file
 
 export default function PrivacyPolicy() {
+
+  const [contentSections, setContentSections] = useState([]);
+
+useEffect(() => {
+  fetch("http://127.0.0.1:8000/api/content-sections/privacy/")
+    .then((response) => response.json())
+    .then((data) => setContentSections(data))
+    .catch((error) => console.error("Failed to load privacy content:", error));
+}, []);
+
+const LAST_SECTION_LETTER = "N";
+
+const getSectionLetter = (index) => {
+  return String.fromCharCode(
+    LAST_SECTION_LETTER.charCodeAt(0) + index + 1
+  );
+};
   return (
     <div className="container pri">
       <section className="text-center mb-4">
@@ -362,7 +379,36 @@ export default function PrivacyPolicy() {
           <p>If, during the verification process, there is reasonable suspicion of <strong>fraudulent activity, misrepresentation, or breach of our platform policies</strong>, Aorbo Treks reserves the right to <strong>withhold or delay</strong> the deletion or deactivation of the account. In such cases, the User must cooperate with our <strong>Customer Care Support team</strong> to facilitate further review. Final action will be taken only after due diligence and resolution of the concerns raised.</p>
           <p>Please note that while your account will be deleted, Aorbo Treks may retain certain transactional or legal data as required by applicable laws. Additionally, your email ID or phone number used to register the deleted account may not be eligible for reuse in a new account for a period of <strong>12 months</strong> following the deletion.</p>
         </div>
+
+         {/* Additional Privacy Policy Sections from Admin */}
+
+{contentSections.length > 0 &&
+  contentSections.map((section, index) => (
+    <div
+  key={section.id}
+  style={{ marginBottom: "20px" }}
+>
+      <h3 className="h4 fw-semibold">
+        {getSectionLetter(index)}. {section.heading}
+      </h3>
+
+      {section.sub_heading && (
+        <h5 className="fw-semibold">
+          {section.sub_heading}
+        </h5>
+      )}
+
+      <div
+        dangerouslySetInnerHTML={{
+          __html: section.content,
+        }}
+      />
+
+    </div>
+  ))
+}
       </section>
+      
     </div>
   );
 }

@@ -1,6 +1,14 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 export default function Terms() {
+  const [contentSections, setContentSections] = useState([]);
+
+useEffect(() => {
+  fetch("http://127.0.0.1:8000/api/content-sections/terms/")
+    .then((response) => response.json())
+    .then((data) => setContentSections(data))
+    .catch((error) => console.error("Failed to load content:", error));
+}, []);
   // Directly embedded styles to avoid a separate CSS file
   const styles = {
     container: {
@@ -535,6 +543,31 @@ export default function Terms() {
         pricing, itinerary, or any issues, disputes, or claims that may arise from interactions between the user and the
         trek operator.
       </p>
+    {/* Future Updates from Admin */}
+
+{contentSections.length > 0 &&
+  contentSections.map((section, index) => (
+    <div key={section.id} style={{ marginBottom: "35px" }}>
+      <h3 style={styles.heading3}>
+        {20 + index + 1}. {section.heading}
+      </h3>
+
+      {section.sub_heading && (
+        <h4 style={styles.heading4}>
+          {section.sub_heading}
+        </h4>
+      )}
+
+      <div
+        style={styles.paragraph}
+        dangerouslySetInnerHTML={{
+          __html: section.content,
+        }}
+      />
+    </div>
+  ))
+}
+
     </div>
   );
 }

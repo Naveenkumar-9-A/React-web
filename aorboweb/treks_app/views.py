@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 from .models import (
     Contact, Blog, TrekCategory, Trek, 
     Testimonial, FAQ, SafetyTip, TeamMember,
-    HomepageBanner, TrekList, SearchLog, OsmDraftTrek, ContactInfo, SocialMedia
+    HomepageBanner, TrekList, SearchLog, OsmDraftTrek, ContactInfo, SocialMedia, ContentSection
 )
 
 def send_email_async(mail):
@@ -169,7 +169,27 @@ def contact(request):
     return JsonResponse({"message": "Message sent successfully"})
 
 
+@api_view(["GET"])
+def api_content_sections(request, page):
+    sections = (
+        ContentSection.objects
+        .filter(page=page, is_active=True)
+        .order_by("order")
+    )
 
+    data = []
+
+    for section in sections:
+        data.append({
+            "id": section.id,
+            "page": section.page,
+            "heading": section.heading,
+            "sub_heading": section.sub_heading,
+            "content": section.content,
+            "order": section.order,
+        })
+
+    return Response(data)
 
 @api_view(['GET'])
 def api_featured_treks(request):
@@ -389,9 +409,13 @@ def api_travel_your_way(request):
     if cached:
         return Response(cached)
 
-    queryset = TrekList.objects.filter(
-        tags__name__iexact=tag
-    ).prefetch_related('images', 'tags').distinct()
+    queryset = (
+        TrekList.objects
+        .filter(tags__name__iexact=tag)
+        .prefetch_related("images", "tags")
+        .distinct()
+        .order_by("-created_at")
+    )
     paginator = Paginator(queryset, 12)               # ← added, 12 per page
     page_obj = paginator.get_page(page_number)
     results = []
