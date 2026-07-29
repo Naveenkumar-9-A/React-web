@@ -1,13 +1,21 @@
-# Python cache
+# Python
 __pycache__/
 *.py[cod]
-
-# Virtual environments
 venv/
 .env
 
-# Node modules
+# Django
+db.sqlite3
+media/
+staticfiles/
+
+# Node
 node_modules/
 
-# VS Code
+# IDE
 .vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

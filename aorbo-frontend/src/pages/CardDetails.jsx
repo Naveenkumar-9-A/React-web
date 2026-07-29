@@ -71,7 +71,7 @@ export default function CardDetails() {
 
         {/* BACK BUTTON */}
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/')}
           style={{ position: 'absolute', top: '1.25rem', left: '1.25rem', background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.25)', color: '#fff', borderRadius: '999px', padding: '7px 18px', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
         >
           ← Back

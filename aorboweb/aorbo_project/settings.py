@@ -108,7 +108,7 @@ AXES_LOCKOUT_TEMPLATE = 'registration/lockout.html'
 AXES_LOCKOUT_URL = '/locked/'
 AXES_IP_WHITELIST = []
 AXES_ENABLE_ACCESS_LOG = True
-
+AXES_ENABLED = False
 ROOT_URLCONF = 'aorbo_project.urls'
 
 TEMPLATES = [
