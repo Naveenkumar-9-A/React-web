@@ -1,4 +1,5 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, throttle_classes
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.response import Response
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
@@ -560,6 +561,7 @@ def api_social_media(request):
 # ============ OpenAI Destination Enrichment Endpoint ============
 
 @api_view(['GET'])
+@throttle_classes([ScopedRateThrottle])
 def api_enrich_destination(request):
     """
     Enrich destination data using OpenAI for destinations not in database.
@@ -621,6 +623,8 @@ def api_enrich_destination(request):
         "enrichment": enriched_data,
         "image_url": image_url,
     })
+# ✅ SECURITY FIX: rate-limit this endpoint (it calls a paid AI API) to prevent abuse
+api_enrich_destination.throttle_scope = 'ai_enrich'
 
 
 def api_nearby_destinations(request):
@@ -851,6 +855,7 @@ def api_search_intelligent(request):
 
 @csrf_exempt
 @api_view(['POST'])
+@throttle_classes([ScopedRateThrottle])
 def api_create_trek_from_osm(request):
     """
     Triggered when a visitor clicks an OSM search result. Runs AI enrichment
@@ -869,6 +874,13 @@ def api_create_trek_from_osm(request):
 
     if not name:
         return Response({"error": "Destination name is required"}, status=400)
+
+    # ✅ SECURITY FIX: validate coordinates are real numbers before storing them
+    try:
+        lat = float(lat) if lat not in (None, '') else None
+        lon = float(lon) if lon not in (None, '') else None
+    except (TypeError, ValueError):
+        return Response({"error": "Invalid coordinates"}, status=400)
 
     lock_key = f"osm_draft_lock_{name.lower().strip()}"
     lock_acquired = cache.add(lock_key, True, timeout=30)
@@ -915,3 +927,5 @@ def api_create_trek_from_osm(request):
 
     finally:
         cache.delete(lock_key)
+# ✅ SECURITY FIX: rate-limit this endpoint (it triggers AI calls, DB writes, and emails)
+api_create_trek_from_osm.throttle_scope = 'osm_draft_create'

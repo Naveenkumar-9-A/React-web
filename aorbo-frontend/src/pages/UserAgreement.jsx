@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import DOMPurify from 'dompurify';
 
 export default function UserAgreement() {
 
@@ -346,7 +347,7 @@ useEffect(() => {
 
       <div
         dangerouslySetInnerHTML={{
-          __html: section.content,
+          __html: DOMPurify.sanitize(section.content),
         }}
       />
     </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import '../styles/PrivacyPolicy.css'; // Make sure to paste the CSS block below into this file
+import DOMPurify from 'dompurify';
 
 export default function PrivacyPolicy() {
 
@@ -400,7 +401,7 @@ const getSectionLetter = (index) => {
 
       <div
         dangerouslySetInnerHTML={{
-          __html: section.content,
+          __html: DOMPurify.sanitize(section.content),
         }}
       />
 

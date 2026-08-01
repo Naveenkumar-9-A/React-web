@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import DOMPurify from 'dompurify';
 
 export default function BlogDetail() {
   const { slug } = useParams(); 
@@ -198,7 +199,7 @@ export default function BlogDetail() {
           <article 
             className="blog-content" 
             id="blogContent"
-            dangerouslySetInnerHTML={{ __html: blog.content }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(blog.content) }}
           />
 
           <aside className="blog-sidebar">

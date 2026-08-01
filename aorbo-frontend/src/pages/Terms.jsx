@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import DOMPurify from 'dompurify';
 
 export default function Terms() {
   const [contentSections, setContentSections] = useState([]);
@@ -561,7 +562,7 @@ useEffect(() => {
       <div
         style={styles.paragraph}
         dangerouslySetInnerHTML={{
-          __html: section.content,
+          __html: DOMPurify.sanitize(section.content),
         }}
       />
     </div>
