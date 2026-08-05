@@ -1,68 +1,88 @@
-
-:root {
-  --white: #ffffff;
-  --text-main: #1e293b;
-  --text-muted: #475569;
-  --accent-gold: #facc15;
-  --hover-gold: #e2b100;
-  --border-light: rgba(226, 232, 240, 0.8);
-  --card-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
-  --gold-glow: 0 20px 40px rgba(250, 204, 21, 0.12);
-  --transition-smooth: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
 .safety-page {
-  padding: clamp(2rem, 5vw, 4rem) clamp(1rem, 3vw, 1.5rem) 5rem;
-  background: linear-gradient(180deg, #f8fafc 0%, #fffdf6 100%);
+  padding: 60px 40px 5rem;
+
+  background:
+    radial-gradient(circle at top right,
+      rgba(250,204,21,.15),
+      transparent 30%),
+    linear-gradient(
+      to bottom,
+      #ffffff,
+      #f8fafc
+    );
   min-height: 100vh;
 }
 
 .safety-container-fluid {
-  max-width: 1140px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
-/* MAIN HEADING OVERRIDE */
+/* MAIN HEADING — matches About's gradient section-title treatment */
 .safety-main-title {
-  font-size: clamp(2.5rem, 5vw, 3.5rem);
-  font-weight: 800;
-  color: var(--text-main);
-  margin-bottom: 2rem;
-  margin-top: 0;
-  display: inline-flex;
-  flex-direction: column;
-}
+  font-size: 5rem;
+  font-weight: 900;
 
-.safety-main-title::after {
-  content: '';
-  width: 60px;
-  height: 5px;
-  background: var(--accent-gold);
-  margin-top: 12px;
-  border-radius: 10px;
-  transition: var(--transition-smooth);
-}
+  background:
+    linear-gradient(
+      180deg,
+      #fde68a,
+      #fbbf24
+    );
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 
-.safety-page:hover .safety-main-title::after {
-  width: 100px;
+  letter-spacing: -2px;
+  margin-bottom: 40px;
 }
 
 .section-title {
-  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-size: 1.6rem;
   font-weight: 700;
-  color: var(--text-main);
-  margin-bottom: 2rem;
+  color: #111827;
+  margin-bottom: 20px;
 }
 
-/* WHITE CARDS FOR THE FIRST THREE SECTIONS */
+/* CARD SECTIONS — same white shine-sweep card as About's .content-section */
 .safety-container-fluid section {
-  background: var(--white);
-  padding: 3rem 2.5rem;
+  background: #ffffff;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0,0,0,.06);
+  padding: 36px;
+  border: 1px solid rgba(250,204,21,.2);
   border-radius: 24px;
-  border: 1px solid var(--border-light);
-  box-shadow: var(--card-shadow);
-  margin-bottom: 4rem;
-  transition: var(--transition-smooth);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 48px;
+  transition: .5s;
+}
+
+.safety-container-fluid section::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(251,191,36,.08),
+      transparent
+    );
+  transition: 0.8s;
+}
+
+.safety-container-fluid section:hover {
+  transform: translateY(-3px);
+  border-color: #facc15;
+  box-shadow: 0 20px 40px rgba(250,204,21,.15);
+}
+
+.safety-container-fluid section:hover::after {
+  left: 100%;
 }
 
 .safety-hero {
@@ -74,66 +94,78 @@
 
 .safety-image img {
   width: 100%;
-  border-radius: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(251,191,36,.15);
   object-fit: cover;
   aspect-ratio: 16 / 10;
+  animation: floating 4s ease-in-out infinite;
+  transition: .5s;
+}
+
+.safety-image img:hover {
+  transform: scale(1.05) rotate(1deg);
+  box-shadow: 0 0 30px rgba(251,191,36,.15);
 }
 
 .safety-content h2 {
-  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  color: #111827;
+  font-size: 2.4rem;
   font-weight: 800;
-  margin-bottom: 1.25rem;
-  margin-top: 0;
+  margin: 0 0 1.25rem;
 }
 
 .safety-content p {
+  color: #4b5563;
+  max-width: 90%;
+  line-height: 1.8;
   font-size: 1.1rem;
-  line-height: 1.85;
-  color: var(--text-muted);
 }
 
-/* FIRST THREE SECTIONS GRID COUPLING */
+/* FEATURE / TREKKER / PLATFORM CARDS — same grid card style as About's .feature-list */
 .scrollable-row {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-top: 30px;
 }
 
 .interactive-card {
-  padding: 1.75rem;
-  background: rgba(248, 250, 252, 0.5);
-  border-left: 5px solid var(--accent-gold);
-  border-radius: 4px 16px 16px 4px;
-  transition: var(--transition-smooth);
+  background: #ffffff;
+  border: 1px solid rgba(250,204,21,.2);
+  border-radius: 24px;
+  padding: 32px 24px;
+  text-align: center;
+  transition: all .3s ease;
+  box-shadow: 0 10px 25px rgba(0,0,0,.05);
 }
 
 .interactive-card:hover {
-  background: var(--white);
-  transform: translateY(-5px) translateX(4px);
-  box-shadow: var(--gold-glow);
-  border-color: rgba(250, 204, 21, 0.3);
-  border-left-color: var(--hover-gold);
+  transform: translateY(-3px);
+  border-color: #facc15;
+  box-shadow: 0 20px 40px rgba(250,204,21,.18);
 }
 
 .interactive-card h3 {
-  font-size: 1.25rem;
+  display: block;
+  margin-bottom: 12px;
+  font-size: 1.4rem;
+  color: #111827;
   font-weight: 700;
-  margin: 0 0 0.75rem 0;
-  color: var(--text-main);
   transition: color 0.3s ease;
 }
 
 .interactive-card:hover h3 {
-  color: var(--hover-gold);
+  color: #f59e0b;
 }
 
 .card-text-full {
+  color: #6b7280;
+  line-height: 1.8;
   font-size: 1.02rem;
-  line-height: 1.7;
-  color: var(--text-muted);
 }
 
-.safety-card-image, .platform-image {
+.safety-card-image,
+.platform-image {
   display: flex;
   justify-content: center;
   margin: 1.5rem 0 3rem;
@@ -142,37 +174,62 @@
 .interactive-image-wrapper img {
   max-width: 480px;
   width: 100%;
-  border-radius: 16px;
-  transition: var(--transition-smooth);
+  border-radius: 20px;
+  border: 1px solid rgba(251,191,36,.15);
+  animation: floating 4s ease-in-out infinite;
+  transition: .5s;
 }
 
 .interactive-image-wrapper:hover img {
-  transform: scale(1.03);
+  transform: scale(1.05) rotate(1deg);
+  box-shadow: 0 0 30px rgba(251,191,36,.15);
 }
 
-/* ==========================================================================
-   🎯 DIFFERENTIAL STYLING OVERRIDES FOR THE LAST (GROUP) SECTION
-   ========================================================================== */
+/* GROUP BOOKINGS — same warm gold gradient block as About's .ready-explore */
 .group-section-wrapper {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%) !important;
+  background: linear-gradient(
+    135deg,
+    #e1c246d9,
+    #f59e0b
+  ) !important;
   border: none !important;
-  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
-  color: var(--white);
+  color: #111827;
+  position: relative;
+  padding: 40px !important;
+}
+
+.group-section-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(251,191,36,.15),
+      transparent 70%
+    );
+  opacity: 0;
+  transition: .4s;
+}
+
+.group-section-wrapper:hover::before {
+  opacity: 1;
 }
 
 .group-section-title {
-  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  color: #111827;
+  font-size: 3rem;
   font-weight: 800;
-  line-height: 1.3;
-  color: var(--white);
   margin-bottom: 2.5rem;
   text-align: center;
+  position: relative;
 }
 
 .group-image-wrapper {
   display: flex;
   justify-content: center;
   margin-bottom: 3.5rem;
+  position: relative;
 }
 
 .group-center-banner {
@@ -180,52 +237,51 @@
   width: 100%;
   height: auto;
   border-radius: 20px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
-  transition: var(--transition-smooth);
+  border: 1px solid rgba(255,255,255,.3);
+  animation: floating 4s ease-in-out infinite;
+  transition: .5s;
 }
 
 .group-section-wrapper:hover .group-center-banner {
   transform: scale(1.04) rotate(1deg);
 }
 
-/* Reconfigured 3-Column Layout specifically for Group Cards */
 .group-cards-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
+  gap: 24px;
+  position: relative;
 }
 
 .group-interactive-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-top: 4px solid var(--accent-gold); /* Shipped border to the top for a distinct look */
-  padding: 2rem 1.5rem;
+  background: rgba(255,255,255,.35);
+  border: 1px solid rgba(255,255,255,.4);
   border-radius: 16px;
-  transition: var(--transition-smooth);
+  padding: 2rem 1.5rem;
+  transition: all .3s ease;
 }
 
 .group-interactive-card:hover {
-  background: rgba(255, 255, 255, 0.09);
-  transform: translateY(-8px);
-  border-color: rgba(250, 204, 21, 0.4);
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+  transform: translateY(-5px);
+  background: rgba(255,255,255,.5);
+  box-shadow: 0 15px 30px rgba(0,0,0,.1);
 }
 
 .group-interactive-card h3 {
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--accent-gold);
+  color: #111827;
   margin: 0 0 0.75rem 0;
 }
 
 .group-interactive-card p {
   font-size: 0.95rem;
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.75);
+  color: #374151;
   margin: 0;
 }
 
-/* ANIMATION COMPONENT DEFINITIONS */
+/* ANIMATIONS */
 .animate-fade-up {
   animation: safeFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -235,33 +291,30 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ==========================================================================
-   📱 RESPONSIVE BREAKPOINT CONTROLS
-   ========================================================================== */
-@media (max-width: 1024px) {
-  .group-cards-grid {
-    grid-template-columns: repeat(2, 1fr); /* 2 Columns on small laptops/tablets */
-  }
+@keyframes floating {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+  100% { transform: translateY(0px); }
 }
 
+/* RESPONSIVE */
 @media (max-width: 900px) {
   .safety-hero {
     grid-template-columns: 1fr;
     text-align: center;
   }
   .safety-image { max-width: 500px; margin: 0 auto; }
-  .scrollable-row { grid-template-columns: 1fr; }
+  .scrollable-row { grid-template-columns: 1fr 1fr; }
+  .group-cards-grid { grid-template-columns: 1fr 1fr; }
 }
 
-@media (max-width: 600px) {
-  .group-cards-grid {
-    grid-template-columns: 1fr; /* 1 Column on mobile devices */
-  }
-  .group-section-wrapper { padding: 2rem 1.25rem !important; }
+@media (max-width: 768px) {
+  .scrollable-row { grid-template-columns: 1fr; }
+  .group-cards-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {
-  .safety-main-title { font-size: 2.3rem; }
+  .safety-main-title { font-size: 2.8rem; }
   .section-title { font-size: 1.6rem; }
-  .safety-hero { padding: 1.5rem; }
+  .group-section-title { font-size: 2rem; }
 }
