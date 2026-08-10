@@ -626,7 +626,7 @@ def api_enrich_destination(request):
 # ✅ SECURITY FIX: rate-limit this endpoint (it calls a paid AI API) to prevent abuse
 api_enrich_destination.throttle_scope = 'ai_enrich'
 
-
+@api_view(['GET'])
 def api_nearby_destinations(request):
     """
     ✅ PHASE 4: Find nearby trekking places and adventure destinations.
