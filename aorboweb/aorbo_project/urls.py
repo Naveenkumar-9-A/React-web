@@ -16,10 +16,18 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.http import JsonResponse
 from django.conf import settings
 from django.conf.urls.static import static
 
+def home(request):
+    return JsonResponse({
+        "message": "Aorbo backend is running successfully",
+        "status": "ok"
+    })
+
 urlpatterns = [
+    path('', home, name='home'),
     path('supersecretadmin/', admin.site.urls),
     path('accounts/', include('django.contrib.auth.urls')),
     path('', include('treks_app.urls')),
