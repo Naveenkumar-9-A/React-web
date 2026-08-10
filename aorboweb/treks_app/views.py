@@ -642,9 +642,9 @@ def api_nearby_destinations(request):
         - nearby_destinations: List of nearby places sorted by distance
         - current_location: Current coordinates
     """
-    from .nearby_discovery import find_nearby_destinations, prepare_nearby_response
     
     try:
+        from .nearby_discovery import find_nearby_destinations, prepare_nearby_response
         # Get parameters
         lat = request.GET.get('lat', '').strip()
         lon = request.GET.get('lon', '').strip()
@@ -686,8 +686,11 @@ def api_nearby_destinations(request):
         })
         
     except Exception as e:
-        logger.error(f"Error fetching nearby destinations: {str(e)}")
-        return Response({"error": f"Error fetching nearby destinations: {str(e)}"}, status=500)
+        logger.exception("Error fetching nearby destinations")
+        return Response(
+            {"error": f"Error fetching nearby destinations: {str(e)}"},
+            status=500
+    )
 
 
 # ========================================
