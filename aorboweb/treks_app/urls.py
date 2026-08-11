@@ -28,15 +28,9 @@ path('api/social-media/', views.api_social_media, name='api_social_media'),
     path('api/search/osm-filter/', views.filter_osm_results, name='filter_osm_results'),
     # ✅ FINAL FIX: Intelligent search with multi-query attempts
     path('api/search/intelligent/', views.api_search_intelligent, name='api_search_intelligent'),
-    # Search
-    # path('search/', views.search_trek, name='search_trek'),
-    # path('search-suggestions/', views.search_suggestions, name='search_suggestions'),
-
-    # Travel Your Way
-    # path('travel-your-way/', views.travel_your_way, name='travel_your_way'),
-
     # ✅ Contact (ONLY ONE)
     path('contact/', views.contact, name='contact'),
+    path('api/contact-submit/', views.contact, name='api_contact_submit'),
     # ✅ Content Sections
     path('api/content-sections/<str:page>/', views.api_content_sections, name='api_content_sections'),
 ]
