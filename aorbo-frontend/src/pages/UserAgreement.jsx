@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import DOMPurify from 'dompurify';
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 export default function UserAgreement() {
 
   const [contentSections, setContentSections] = useState([]);
 
 useEffect(() => {
-  fetch("http://127.0.0.1:8000/api/content-sections/agreement/")
+  fetch(`${BACKEND_URL}/api/content-sections/agreement/`)
     .then((response) => response.json())
     .then((data) => setContentSections(data))
     .catch((error) =>
