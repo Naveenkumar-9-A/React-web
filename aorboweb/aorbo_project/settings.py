@@ -171,6 +171,18 @@ EMAIL_HOST_USER = config("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+ADMINS = [
+    ('', config('ADMIN_EMAIL_1')),
+    ('', config('ADMIN_EMAIL_2')),
+    ('', config('ADMIN_EMAIL_3')),
+]
+MANAGERS = ADMINS
+SERVER_EMAIL = EMAIL_HOST_USER
+EMAIL_SUBJECT_PREFIX = '[Aorbo Treks Error Message] '
+
+DEFAULT_EXCEPTION_REPORTER_FILTER = 'aorbo_project.reporter_filter.MinimalExceptionReporterFilter'
+DEFAULT_EXCEPTION_REPORTER = 'aorbo_project.reporter_filter.MinimalExceptionReporter'
+
 OSM_DRAFT_NOTIFICATION_EMAILS = [
     "hello@aorbotreks.com",
     
@@ -213,7 +225,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         # DEBUG mode: Relaxed limits for development
         # PRODUCTION mode: Strict limits for security
-        'anon': '10000/hour' if DEBUG else '100/hour',  # 10,000/hour in DEBUG, 100/hour in production
+        'anon': '10000/hour' if DEBUG else '1000/hour',  # 10,000/hour in DEBUG, 1000/hour in production
         'user': '50000/hour' if DEBUG else '1000/hour',  # 50,000/hour in DEBUG, 1,000/hour in production
         'osm_draft_create': '60/hour',
         'ai_enrich': '20/hour',
