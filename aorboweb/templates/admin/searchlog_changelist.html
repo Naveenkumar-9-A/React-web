@@ -108,19 +108,19 @@ setInterval(function() {
 <hr class="analytics-divider">
 {{ block.super }}
 
-<script id="analytics-data" type="application/json">
-{
-    "queryLabels": {{ top_queries_labels|safe }},
-    "queryData": {{ top_queries_data|safe }},
-    "tagLabels": {{ top_tags_labels|safe }},
-    "tagData": {{ top_tags_data|safe }}
-}
-</script>
+{{ top_queries_labels|json_script:"queryLabels-data" }}
+{{ top_queries_data|json_script:"queryData-data" }}
+{{ top_tags_labels|json_script:"tagLabels-data" }}
+{{ top_tags_data|json_script:"tagData-data" }}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    var raw = document.getElementById('analytics-data').textContent;
-    var d = JSON.parse(raw);
+    var d = {
+        "queryLabels": JSON.parse(document.getElementById('queryLabels-data').textContent),
+        "queryData": JSON.parse(document.getElementById('queryData-data').textContent),
+        "tagLabels": JSON.parse(document.getElementById('tagLabels-data').textContent),
+        "tagData": JSON.parse(document.getElementById('tagData-data').textContent)
+    };
 
     var qCtx = document.getElementById('queryChart');
     if (qCtx && d.queryLabels.length > 0) {
