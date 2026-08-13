@@ -145,8 +145,9 @@
 <!-- Hidden form purely so Django renders {% csrf_token %} and sets the csrftoken cookie for our fetch() calls -->
 <form id="csCsrfForm" style="display:none">{% csrf_token %}</form>
 
+{{ submissions|json_script:"submissions-data" }}
 <script>
-const data = {{ submissions_json|safe }};
+const data = JSON.parse(document.getElementById('submissions-data').textContent);
 const SOFT_DELETE_URL = "{% url 'admin:contact_soft_delete' %}";
 const RESTORE_URL = "{% url 'admin:contact_restore' %}";
 const PERMANENT_DELETE_URL = "{% url 'admin:contact_permanent_delete' %}";

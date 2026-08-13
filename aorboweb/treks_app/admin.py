@@ -10,8 +10,6 @@ from django.urls import reverse, path
 import supabase
 from django import forms
 
-import json
-
 admin.site.site_header = "Aorbo Treks Admin"
 admin.site.site_title = "Aorbo Treks Admin Pannel"
 admin.site.index_title = "Dashboard"
@@ -78,7 +76,7 @@ class ContactAdmin(admin.ModelAdmin):
                 'deleted_at':    item['deleted_at'].isoformat() if item['deleted_at'] else '',
             })
         extra_context = extra_context or {}
-        extra_context['submissions_json'] = json.dumps(submissions)
+        extra_context['submissions'] = submissions
         return super().changelist_view(request, extra_context=extra_context)
 
     def get_urls(self):
@@ -521,10 +519,10 @@ class SearchLogAdmin(admin.ModelAdmin):
             'top_tag_count': top_tag_count,
             'top_trek': top_trek,
             'top_trek_count': top_trek_count,
-            'top_queries_labels': json.dumps([t['trek__name'] for t in top_treks_chart_qs]),
-            'top_queries_data': json.dumps([t['count'] for t in top_treks_chart_qs]),
-            'top_tags_labels': json.dumps([t['tag'] for t in top_tags_qs]),
-            'top_tags_data': json.dumps([t['count'] for t in top_tags_qs]),
+            'top_queries_labels': [t['trek__name'] for t in top_treks_chart_qs],
+            'top_queries_data': [t['count'] for t in top_treks_chart_qs],
+            'top_tags_labels': [t['tag'] for t in top_tags_qs],
+            'top_tags_data': [t['count'] for t in top_tags_qs],
         }
 
         extra_context = {**(extra_context or {}), **extra}
