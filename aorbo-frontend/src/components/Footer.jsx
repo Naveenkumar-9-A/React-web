@@ -137,13 +137,13 @@ export default function Footer() {
             Whether you're going solo or with a group, we make trekking simple and hassle-free. 🗺💕
           </p>
           <div style={styles.appButtons}>
-            <a href="#" style={{ display: 'inline-block' }}>
-              <img src="/images/Vector.webp" alt="Get it on Google Play" style={styles.appBtnImg} />
-            </a>
-            <a href="#" style={{ display: 'inline-block' }}>
-              <img src="/images/Vector-1.webp" alt="Download on App Store" style={styles.appBtnImg} />
-            </a>
-          </div>
+  <a href="https://play.google.com/store" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block' }}>
+    <img src="/images/Vector.webp" alt="Get it on Google Play" style={styles.appBtnImg} />
+  </a>
+  <a href="https://www.apple.com/app-store/" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block' }}>
+    <img src="/images/Vector-1.webp" alt="Download on App Store" style={styles.appBtnImg} />
+  </a>
+</div>
         </div>
 
         {/* RIGHT COLUMN: LINKS NAVIGATION */}

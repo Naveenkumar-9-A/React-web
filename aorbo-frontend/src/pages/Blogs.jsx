@@ -46,7 +46,7 @@ const BACKEND_URL = 'http://127.0.0.1:8000';
               </div>
               <div className="blog-content">
                 <div className="blog-meta">
-                  <img src="/images/R-logo.webp" alt="Aorbo" className="blog-logo" />
+                  <img src="/images/Group 1000001381.png" alt="Aorbo" className="blog-logo" />
                   <div className="blog-date">
                     {new Date(blog.created_at).toLocaleDateString('en-US', {
                       year: 'numeric', month: 'long', day: 'numeric'

@@ -25,9 +25,9 @@ export default function About() {
                 trekking enthusiasts struggling to find reliable organizers and secure options. So, we
                 decided to take matters into our own hands and create a platform that adventurers can trust.
               </p>
-              <span className="view-toggle-btn" onClick={() => toggleSection('who')}>
+              {/* <span className="view-toggle-btn" onClick={() => toggleSection('who')}>
                 {isExpanded['who'] ? 'Read Less ▲' : 'Read More ▼'}
-              </span>
+              </span> */}
             </div>
           </div>
           <div className="about-right about-image">
@@ -53,9 +53,9 @@ export default function About() {
           Aorbo Treks, ensuring that no one else has to go through the same challenges. Our platform is
           designed to be your trusted guide, making every step of your journey worth remembering.
         </p>
-        <span className="view-toggle-btn" onClick={() => toggleSection('backstory')}>
+        {/* <span className="view-toggle-btn" onClick={() => toggleSection('backstory')}>
           {isExpanded['backstory'] ? 'Read Less ▲' : 'Read More ▼'}
-        </span>
+        </span> */}
       </div>
 
       {/* GOAL CARD */}
@@ -68,9 +68,9 @@ export default function About() {
           Aorbo Treks, you won't have to worry about getting ghosted. Instead, you'll find the perfect
           match for your adventure needs.
         </p>
-        <span className="view-toggle-btn" onClick={() => toggleSection('goal')}>
+        {/* <span className="view-toggle-btn" onClick={() => toggleSection('goal')}>
           {isExpanded['goal'] ? 'Read Less ▲' : 'Read More ▼'}
-        </span>
+        </span> */}
       </div>
 </div>
       {/* MISSION SPLIT SECTION */}
@@ -84,9 +84,9 @@ export default function About() {
               your trekking discoveries safe, unforgettable. We believe that trekking should be
               accessible to everyone, and we are here to make that happen.
             </p>
-            <span className="view-toggle-btn" onClick={() => toggleSection('mission')}>
+            {/* <span className="view-toggle-btn" onClick={() => toggleSection('mission')}>
               {isExpanded['mission'] ? 'Read Less ▲' : 'Read More ▼'}
-            </span>
+            </span> */}
           </div>
           <div className="about-right about-image mission-img-box">
             <img 
@@ -109,9 +109,9 @@ export default function About() {
           who understand the ins and outs of adventure travel, always ready to go the extra mile to
           provide the best service.
         </p>
-        <span className="view-toggle-btn" onClick={() => toggleSection('dedication')}>
+        {/* <span className="view-toggle-btn" onClick={() => toggleSection('dedication')}>
           {isExpanded['dedication'] ? 'Read Less ▲' : 'Read More ▼'}
-        </span>
+        </span> */}
       </div>
 
       {/* AGENDA CARD */}
@@ -123,9 +123,9 @@ export default function About() {
           with nature, meet like-minded adventurers, and create memories that last a lifetime. And while
           you focus on the thrill, we handle the logistics to ensure a hassle-free experience.
         </p>
-        <span className="view-toggle-btn" onClick={() => toggleSection('agenda')}>
+        {/* <span className="view-toggle-btn" onClick={() => toggleSection('agenda')}>
           {isExpanded['agenda'] ? 'Read Less ▲' : 'Read More ▼'}
-        </span>
+        </span> */}
       </div>
 </div>
       {/* WHY CHOOSE LIST */}
