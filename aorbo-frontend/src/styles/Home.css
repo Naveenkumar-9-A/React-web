@@ -140,6 +140,19 @@ body { background-color: #f7f5f0 !important; color: #1e293b; }
   .hero-search-input { padding: 0.8rem 1rem; }
   .hero-search-button { padding: 0 1.2rem; border-radius: 10px; }
 }
+.hero-search-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-top-color: #3a3a3a;
+  border-radius: 50%;
+  animation: heroSearchSpin 0.6s linear infinite;
+}
+
+@keyframes heroSearchSpin {
+  to { transform: rotate(360deg); }
+}
 
 /* ==========================================
    TRAVEL YOUR WAY CATEGORIES
