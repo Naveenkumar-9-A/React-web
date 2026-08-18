@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
 import DOMPurify from 'dompurify';
+import { useEffect, useState } from "react";
 
 export default function UserAgreement() {
 
@@ -17,7 +17,7 @@ useEffect(() => {
   const styles = {
     container: {
       maxWidth: '1000px',
-      margin: 'clamp(2rem, 5vw, 4rem) auto 0',
+      margin: 'clamp(1rem, 3vw, 1.5rem) auto 0',
       padding: 'clamp(2rem, 4vw, 4rem) clamp(1rem, 4vw, 2rem)',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       backgroundColor: '#ffffff',

@@ -1,5 +1,5 @@
 .pri {
-  margin-top: clamp(4rem, 10vw, 5rem);
+  margin-top: 1rem;
   padding: clamp(1rem, 3vw, 1.5rem) clamp(1rem, 4vw, 1.5rem);
   max-width: 1000px;
   margin-left: auto;
@@ -31,4 +31,16 @@
 
 .pri li p {
   margin-bottom: 0.25rem !important;
+}
+
+/* A site-wide rule in index.css adds generous top/bottom padding
+(clamp(3rem, 6vw, 5rem), i.e. 48-80px) to EVERY <section> tag, which
+looks right for big hero-style blocks on pages like Home/About/Safety.
+This page uses two separate <section> tags stacked directly on top of
+each other (the title block, then the content block), so that padding
+was doubling up between them and creating a large empty gap. Resetting
+it to 0 here only affects sections inside this Privacy Policy page. */
+.pri section {
+  padding-top: 0;
+  padding-bottom: 0;
 }
