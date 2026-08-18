@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import '../styles/PrivacyPolicy.css'; // Make sure to paste the CSS block below into this file
 import DOMPurify from 'dompurify';
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 export default function PrivacyPolicy() {
 
   const [contentSections, setContentSections] = useState([]);
 
 useEffect(() => {
-  fetch("http://127.0.0.1:8000/api/content-sections/privacy/")
+  fetch(`${BACKEND_URL}/api/content-sections/privacy/`)
     .then((response) => response.json())
     .then((data) => setContentSections(data))
     .catch((error) => console.error("Failed to load privacy content:", error));

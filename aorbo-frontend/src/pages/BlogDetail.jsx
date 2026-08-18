@@ -14,7 +14,7 @@ export default function BlogDetail() {
   const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const BACKEND_URL = 'http://127.0.0.1:8000';
+  const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
   useEffect(() => {
     fetchBlogData();
