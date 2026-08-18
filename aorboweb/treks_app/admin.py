@@ -8,6 +8,7 @@ from django.core.cache import cache
 from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse, path
 import supabase
+import json
 from django import forms
 
 admin.site.site_header = "Aorbo Treks Admin"

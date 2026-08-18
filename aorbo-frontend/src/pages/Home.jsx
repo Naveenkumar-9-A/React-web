@@ -15,6 +15,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedTag, setSelectedTag] = useState('');
@@ -110,6 +111,7 @@ const handleSearchInput = (e) => {
   latestQueryRef.current = val;
 
   debounceRef.current = setTimeout(async () => {
+    setIsSearching(true);
     try {
       const res = await fetch(`${BACKEND_URL}/api/treks/search/?q=${val}`);
       const data = await res.json();
@@ -158,6 +160,8 @@ const handleSearchInput = (e) => {
     } catch (err) {
       console.error('Search error:', err);
       setSuggestions([]);
+    } finally {
+      setIsSearching(false);
     }
   }, 500);
 };
@@ -379,9 +383,13 @@ const handleTagClick = (tag) => {
                 />
 
                 <button type="submit" className="hero-search-button" aria-label="Search">
+                  {isSearching ? (
+                    <span className="hero-search-spinner" aria-hidden="true" />
+                  ) : (
                   <svg xmlns="http://www.w3.org/2000/svg" className="hero-search-icon" viewBox="0 0 24 24">
                     <path d="M10 4a6 6 0 0 1 4.8 9.6l3.8 3.8a1 1 0 0 1-1.4 1.4l-3.8-3.8A6 6 0 1 1 10 4zm0 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />
                   </svg>
+                  )}
                 </button>
                 {showSuggestions && suggestions.length > 0 && (
   <div
