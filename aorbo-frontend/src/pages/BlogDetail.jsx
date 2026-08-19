@@ -313,7 +313,7 @@ export default function BlogDetail() {
               })}
             </div>
 
-            <div className="pagination d-flex justify-content-center gap-2 mt-4">
+            {/* <div className="pagination d-flex justify-content-center gap-2 mt-4">
               {hasPrevious && (
                 <Link to={`/blog/${slug}?page=${parseInt(currentPage) - 1}`} className="btn btn-outline-dark">
                   ← Previous
@@ -324,7 +324,7 @@ export default function BlogDetail() {
                   Next →
                 </Link>
               )}
-            </div>
+            </div> */}
           </section>
         )}
       </main>
