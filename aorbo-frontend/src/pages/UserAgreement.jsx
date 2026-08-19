@@ -70,7 +70,7 @@ useEffect(() => {
           agencies, or any other entity offering services through Aorbo Treks.
         </p>
         <p style={styles.paragraph}>
-          1.4 <strong>“Website”</strong> refers to the official website, <strong style={{ color: '#0d6efd' }}>www.aorbotreks.com</strong>, 
+          1.4 <strong>“Website”</strong> refers to the official website, <strong style={{ color: '#0c67ee' }}>www.aorbotreks.com</strong>, 
           as well as any related mobile applications, platforms, and tools provided by Aorbo Treks.
         </p>
         <p style={styles.paragraph}>
