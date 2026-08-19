@@ -11,6 +11,7 @@ import '../styles/Home.css';
 
 export default function Home() {
   const [featuredTreks, setFeaturedTreks] = useState([]);
+  const [loadingTreks, setLoadingTreks] = useState(true);
   const [allTreksForSearch, setAllTreksForSearch] = useState([]); // 🔍 All treks for search (not paginated)
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -63,6 +64,8 @@ export default function Home() {
       setTotalPages(data.total_pages || 1);
     } catch (err) {
       console.error('Failed to fetch treks from database', err);
+    } finally {
+      setLoadingTreks(false);
     }
   };
 
@@ -569,7 +572,14 @@ const handleTagClick = (tag) => {
 
           {/* ALWAYS SHOW FEATURED TREKS - NOT AFFECTED BY SEARCH */}
           <div className="row g-4" id="featured-trek-grid">
-            {featuredTreks && featuredTreks.length > 0 ? (
+            {loadingTreks ? (
+              <div className="text-center py-5 w-100">
+                <div className="spinner-border text-warning" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <p className="text-light text-opacity-50 mt-3 mb-0">Loading featured destinations...</p>
+              </div>
+            ) : featuredTreks && featuredTreks.length > 0 ? (
               featuredTreks.map((trek, index) => {
                 const resolvedImageUrl = trek.images && trek.images[0] && trek.images[0].image_url
                   ? trek.images[0].image_url.startsWith('http')

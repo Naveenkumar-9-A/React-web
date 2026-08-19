@@ -4,6 +4,7 @@ import '../styles/Blogs.css';
 
 export default function Blogs() {
   const [blogs, setBlogs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -24,6 +25,8 @@ const BACKEND_URL = 'http://127.0.0.1:8000';
       console.error('Failed to fetch blogs', err);
       setBlogs([]);
       setTotalPages(1);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -35,7 +38,12 @@ const BACKEND_URL = 'http://127.0.0.1:8000';
     <main className="blogs-container">
       <h1 className="blogs-heading">Blogs</h1>
 
-      {blogs.length > 0 ? (
+      {loading ? (
+        <div className="blogs-loading">
+          <div className="spinner" />
+          <p>Loading blogs...</p>
+        </div>
+      ) : blogs.length > 0 ? (
         <div className="blogs-scroll">
           {blogs.map((blog) => (
             <div className="blog-card" key={blog.slug}>
