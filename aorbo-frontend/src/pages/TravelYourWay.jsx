@@ -27,7 +27,7 @@ export default function TravelYourWay() {
   const abortRef = useRef(null);
 
   const selectedTag  = (searchParams.get('tag')  || 'adventure').toLowerCase();
-  const BACKEND_URL  = 'http://127.0.0.1:8000';
+  const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
   const cacheKey = `${selectedTag}__${currentPage}`;
 
