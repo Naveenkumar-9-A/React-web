@@ -8,7 +8,7 @@ export default function Blogs() {
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchParams, setSearchParams] = useSearchParams();
-const BACKEND_URL = 'http://127.0.0.1:8000';
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
   useEffect(() => {
     const page = parseInt(searchParams.get('page')) || 1;
     setCurrentPage(page);

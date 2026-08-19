@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from "react";
 import DOMPurify from 'dompurify';
+import { useEffect, useState } from "react";
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 export default function UserAgreement() {
 
   const [contentSections, setContentSections] = useState([]);
 
 useEffect(() => {
-  fetch("http://127.0.0.1:8000/api/content-sections/agreement/")
+  fetch(`${BACKEND_URL}/api/content-sections/agreement/`)
     .then((response) => response.json())
     .then((data) => setContentSections(data))
     .catch((error) =>
@@ -17,7 +18,7 @@ useEffect(() => {
   const styles = {
     container: {
       maxWidth: '1000px',
-      margin: 'clamp(2rem, 5vw, 4rem) auto 0',
+      margin: 'clamp(1rem, 3vw, 1.5rem) auto 0',
       padding: 'clamp(2rem, 4vw, 4rem) clamp(1rem, 4vw, 2rem)',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       backgroundColor: '#ffffff',
@@ -70,7 +71,7 @@ useEffect(() => {
           agencies, or any other entity offering services through Aorbo Treks.
         </p>
         <p style={styles.paragraph}>
-          1.4 <strong>“Website”</strong> refers to the official website, <strong style={{ color: '#0d6efd' }}>www.aorbotreks.com</strong>, 
+          1.4 <strong>“Website”</strong> refers to the official website, <strong style={{ color: '#0c67ee' }}>www.aorbotreks.com</strong>, 
           as well as any related mobile applications, platforms, and tools provided by Aorbo Treks.
         </p>
         <p style={styles.paragraph}>

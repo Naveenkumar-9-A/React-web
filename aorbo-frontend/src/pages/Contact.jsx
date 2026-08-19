@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/Contact.css'; // Links directly to your external styles sheet
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 // Validation helpers
 // Exact email format: local-part@domain.tld
@@ -109,12 +110,12 @@ export default function Contact() {
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
-    fetch('/api/contact-info/')
+    fetch(`${BACKEND_URL}/api/contact-info/`)
       .then(res => res.json())
       .then(data => setContactInfo(data))
       .catch(() => {});
 
-    fetch('/api/social-media/')
+    fetch(`${BACKEND_URL}/api/social-media/`)
       .then(res => res.json())
       .then(data => setSocialMedia(data))
       .catch(() => {});
@@ -179,7 +180,7 @@ export default function Contact() {
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/contact-submit/', {
+      const res = await fetch(`${BACKEND_URL}/api/contact-submit/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -440,3 +441,4 @@ export default function Contact() {
     </main>
   );
 }
+

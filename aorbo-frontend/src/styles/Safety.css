@@ -1,5 +1,5 @@
 .safety-page {
-  padding: 60px 40px 5rem;
+  padding: 40px 40px 5rem;
 
   background:
     radial-gradient(circle at top right,
@@ -20,21 +20,18 @@
 
 /* MAIN HEADING — matches About's gradient section-title treatment */
 .safety-main-title {
-  font-size: 5rem;
+  font-size: 3cap;
   font-weight: 900;
+  text-align: center;
+  width: 100%;
 
-  background:
-    linear-gradient(
-      180deg,
-      #fde68a,
-      #fbbf24
-    );
+     background: linear-gradient(180deg, #1b1b1b, #615f5a);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 
   letter-spacing: -2px;
-  margin-bottom: 40px;
+  margin-bottom: 22px;
 }
 
 .section-title {

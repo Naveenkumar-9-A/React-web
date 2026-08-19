@@ -294,6 +294,13 @@ transform:
   .feature-list{
       grid-template-columns:1fr;
   }
+  .section-title {
+    text-align: center;
+    width: 100%;
+  }
+  .about-hero-wrapper {
+    text-align: center;
+  }
   .about-grid {
     grid-template-columns: 1fr;
   }

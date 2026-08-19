@@ -52,6 +52,11 @@ body { background-color: #f7f5f0 !important; color: #1e293b; }
   ) !important;
   z-index: 10;
   padding: 0 1.5rem;
+  pointer-events: none;
+}
+
+.hero-overlay-content > * {
+  pointer-events: auto;
 }
 
 .hero-heading { 
@@ -134,7 +139,7 @@ body { background-color: #f7f5f0 !important; color: #1e293b; }
 .search-suggestion-item:hover, .search-suggestion-item.active { background: #fefbeb; }
 
 @media (max-width: 767.98px) {
-  .hero-carousel, .hero-carousel .carousel-inner, .hero-carousel .carousel-item { height: 75vh; }
+  .hero-carousel, .hero-carousel .carousel-inner, .hero-carousel .carousel-item { height: 100%; }
   .hero-heading { font-size: 2.2rem; }
   .hero-search-wrapper { border-radius: 14px; }
   .hero-search-input { padding: 0.8rem 1rem; }

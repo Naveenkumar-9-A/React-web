@@ -1,0 +1,62 @@
+/* Navbar logo positioning & spacing
+Previously the logo relied only on Bootstrap's default .navbar-brand
+padding/margins, which left it sitting slightly low (extra baseline
+whitespace under inline <img>) and too close to the first nav link. */
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-right: 2rem;
+}
+
+.nav-logo {
+  display: block;   /* removes the few px of baseline gap inline images get */
+  height: 50px;      /* the global "img { height: auto }" responsive rule
+                        overrides the img's height="50" HTML attribute, so
+                        it must be re-asserted here explicitly, or the logo
+                        renders at its full natural (much larger) size */
+  width: auto;
+}
+
+@media (max-width: 991.98px) {
+  .navbar-brand {
+    margin-right: 1rem;
+  }
+  .nav-logo {
+    height: 42px !important;  /* slightly smaller so it has breathing room
+    next to the hamburger toggle on mobile */
+  }
+}
+
+/* Extra visual polish: clearer spacing between links and a modern
+underline indicator on hover/active, instead of relying on color
+change alone. */
+.navbar-nav .nav-item {
+  margin: 0 0.35rem;
+}
+
+.navbar-nav .nav-link {
+  position: relative;
+  padding-bottom: 0.35rem !important;
+}
+
+.navbar-nav .nav-link::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 0;
+  height: 2px;
+  background-color: #f97316; /* matches the existing orange accent already
+                                 used for .nav-link:hover / .active in
+                                 index.css */
+  transition: width 0.25s ease, left 0.25s ease;
+}
+
+.navbar-nav .nav-link:hover::after,
+.navbar-nav .nav-link.active::after {
+  width: 70%;
+  left: 15%;
+}
